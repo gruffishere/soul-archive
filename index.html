@@ -112,29 +112,6 @@
     cursor: not-allowed;
   }
 
-  .demo-link {
-    font-size: 0.7rem;
-    letter-spacing: 0.22em;
-    color: rgba(255, 255, 255, 0.62);
-    cursor: pointer;
-    text-decoration: none;
-    transition: color 0.3s;
-    margin-top: 0.5rem;
-  }
-
-  .demo-link:hover { color: #fff; }
-
-  .about-link {
-    font-size: 0.6rem;
-    letter-spacing: 0.22em;
-    color: rgba(255, 255, 255, 0.38);
-    cursor: pointer;
-    text-decoration: none;
-    transition: color 0.3s;
-    margin-top: 0.6rem;
-  }
-  .about-link:hover { color: rgba(255, 255, 255, 0.85); }
-
   #statusMsg {
     font-size: 0.65rem;
     letter-spacing: 0.15em;
@@ -785,11 +762,9 @@
   <div class="entry-sub">6529 identity portrait / by wallet</div>
 
   <div class="input-wrap">
-    <input id="walletInput" type="text" placeholder="0x... or ENS name" autocomplete="off" spellcheck="false">
+    <input id="walletInput" type="text" placeholder="0x... · ENS · handle" autocomplete="off" spellcheck="false">
     <button id="readBtn" onclick="readSoul()">READ SOUL →</button>
     <div id="statusMsg"></div>
-    <a class="demo-link" onclick="loadDemo()">load demo — punk6529</a>
-    <a class="about-link" href="about.html">about · how it works</a>
   </div>
 
   <!-- MANUAL FORM (API başarısız olursa görünür) -->
@@ -1061,14 +1036,6 @@ async function readSoul() {
 document.getElementById('walletInput').addEventListener('keydown', e => {
   if (e.key === 'Enter') readSoul();
 });
-
-function loadDemo() {
-  renderSoul({
-    address: 'punk6529',
-    tdh: 65906576, level: 100, unique: 484, seasons: 14,
-    genesis: true, sets: 1, nic: 2136784, rep: 3430635
-  });
-}
 
 function submitManual() {
   // soul-organism.js tarafından override edilir — bu fallback

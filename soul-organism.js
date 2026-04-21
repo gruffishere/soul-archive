@@ -136,22 +136,7 @@ function togglePerf() {
 }
 
 
-// ── Demo / Manual ─────────────────────────────────────────
-function loadDemo() {
-  // punk6529 — API'den alınan gerçek veriler (TDH = boosted)
-  renderSoul({
-    address: 'punk6529',
-    tdh:     65989117,
-    boost:   1.72,
-    level:       100,
-    unique:      484,
-    fullSet:     true,
-    nakamoto:    true,
-    nic:         2136784,
-    rep:         3430635,
-  });
-}
-
+// ── Manual ────────────────────────────────────────────────
 function submitManual() {
   const data = {
     address:     document.getElementById('walletInput').value.trim() || 'manual',
