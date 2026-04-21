@@ -1,7 +1,7 @@
 name: Rebuild artist-index
 
-# Her gün sabah 06:00 UTC (TR 09:00) otomatik çalışır.
-# Ayrıca Actions sekmesinden "Run workflow" butonuyla manuel tetiklenebilir.
+# Runs automatically every day at 06:00 UTC.
+# Can also be triggered manually from the Actions tab via "Run workflow".
 on:
   schedule:
     - cron: '0 6 * * *'

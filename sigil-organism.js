@@ -1,23 +1,23 @@
-// SOUL ARCHIVE — Orbital Soul Renderer v3
-// 8 ayrı orbital form · 1080×1080 soul area · Sürekli 3D rotasyon · Heartbeat yok
+// THE SIGILS — Orbital Sigil Renderer v3
+// 8 separate orbital forms · 1080×1080 sigil area · Continuous 3D rotation · No heartbeat
 
-// ── Sabitler ──────────────────────────────────────────────
-const SOUL_SIZE = 1080;
-const SOUL_R    = SOUL_SIZE / 2; // 540 px — maksimum soul yarıçapı (TDH ile ölçeklenir)
+// ── Constants ─────────────────────────────────────────────
+const SIGIL_SIZE = 1080;
+const SIGIL_R    = SIGIL_SIZE / 2; // 540 px — maximum sigil radius (scales with TDH)
 
-// Harmonic loop — tüm animasyonlar 30s master periyodun musikal oranları
-// Oranlar: 1 (rotY), 2 (chroma), 3 (dotOrbit), 4 (breath), 2.5 (pearl), 8 (sparkle)
+// Harmonic loop — every animation is a musical ratio of the 30s master period
+// Ratios: 1 (rotY), 2 (chroma), 3 (dotOrbit), 4 (breath), 2.5 (pearl), 8 (sparkle)
 const LOOP_MASTER   = 30.0;
-const LOOP_ROT_Y    = (2 * Math.PI) / LOOP_MASTER;          // tam tur 30s
+const LOOP_ROT_Y    = (2 * Math.PI) / LOOP_MASTER;          // full turn in 30s
 const LOOP_CHROMA   = (2 * Math.PI) / (LOOP_MASTER / 2);    // 15s hue shimmer
-const LOOP_DOT      = (2 * Math.PI) / (LOOP_MASTER / 3);    // 10s halka dot
+const LOOP_DOT      = (2 * Math.PI) / (LOOP_MASTER / 3);    // 10s ring dot
 const LOOP_BREATH   = (2 * Math.PI) / (LOOP_MASTER / 4);    // 7.5s core/node breath
-const LOOP_PEARL    = (2 * Math.PI) / (LOOP_MASTER / 2.5);  // 12s Nakamoto inci
+const LOOP_PEARL    = (2 * Math.PI) / (LOOP_MASTER / 2.5);  // 12s Nakamoto pearl
 const LOOP_SPARKLE  = (2 * Math.PI) / (LOOP_MASTER / 8);    // 3.75s sparkle
 const CHROMA_AMP    = 14;  // ±14° hue shimmer
 
-// Orbital katmanlar — skaler parametreler (6) + Meme Artist (rainbow, varsa).
-// Nakamoto ve Full Set hâlâ kendi özel formlarıyla çizilir (sahipse).
+// Orbital layers — scalar parameters (6) + Meme Artist (rainbow, if any).
+// Nakamoto and Full Set are still drawn with their own special forms (when owned).
 const LAYERS = [
   { key:'tdh',    name:'TDH',         hue: 42,  rf:0.18, incl: 0.05, az:0.00 },
   { key:'boost',  name:'BOOST',       hue:308,  rf:0.30, incl: 0.62, az:0.80 },
@@ -25,14 +25,14 @@ const LAYERS = [
   { key:'nic',    name:'NIC',         hue:268,  rf:0.54, incl: 0.85, az:2.36 },
   { key:'rep',    name:'REP',         hue:110,  rf:0.66, incl:-0.66, az:3.14 },
   { key:'level',  name:'LEVEL',       hue:350,  rf:0.78, incl: 0.30, az:0.40 },
-  // Meme Artist — diğerleri gibi orbital ring ama rainbow; sadece sanatçıysa
+  // Meme Artist — orbital ring like the others, but rainbow; only for artists
   { key:'artist', name:'MEME ARTIST', hue:  0,  rf:0.86, incl: 0.20, az:2.10, rainbow: true, onlyIf: 'memeArtist' },
 ];
 
-// ── Yardımcı ──────────────────────────────────────────────
-function soulHash(value) {
+// ── Helpers ───────────────────────────────────────────────
+function sigilHash(value) {
   let h = 2166136261;
-  const text = String(value || 'soul');
+  const text = String(value || 'sigil');
   for (let i = 0; i < text.length; i++) {
     h ^= text.charCodeAt(i);
     h = Math.imul(h, 16777619);
@@ -40,7 +40,7 @@ function soulHash(value) {
   return h >>> 0;
 }
 
-function soulRng(seed) {
+function sigilRng(seed) {
   let s = seed >>> 0;
   return function rand() {
     s += 0x6D2B79F5;
@@ -51,24 +51,24 @@ function soulRng(seed) {
   };
 }
 
-// Cüzdan imzası — tam spektrumda (0-360°), irisli paletle uyumlu
-function soulHue(address) {
+// Wallet signature — full spectrum (0-360°), compatible with the iridescent palette
+function sigilHue(address) {
   const raw = String(address || 'manual').toLowerCase();
   const hex = raw.match(/0x([0-9a-f]{6})/);
-  return (hex ? parseInt(hex[1], 16) : soulHash(raw)) % 360;
+  return (hex ? parseInt(hex[1], 16) : sigilHash(raw)) % 360;
 }
 
-// Chroma shimmer — baz hue loop içinde ±CHROMA_AMP derece yavaşça kayar.
-// Her katmanın kendi fazı var → birlikte "nefes alan" irisli shift.
-// perfMode: sin çağrılarını atlar (her frame'de binlerce çağrı → büyük CPU kazancı)
+// Chroma shimmer — base hue drifts slowly by ±CHROMA_AMP degrees over the loop.
+// Each layer has its own phase → together they "breathe" an iridescent shift.
+// perfMode: skips sin() calls (thousands per frame → major CPU savings)
 function chromaHue(base, phase) {
   if (perfMode) return base;
   return (base + Math.sin(T * LOOP_CHROMA + phase) * CHROMA_AMP + 360) % 360;
 }
 
-// (awakening kaldırıldı — ruh her zaman tam parlaklıkta)
+// (awakening removed — the sigil is always at full brightness)
 
-function enrichSoul(data) {
+function enrichSigil(data) {
   const next = Object.assign({
     address:         'manual',
     tdh:             0,
@@ -95,11 +95,11 @@ function enrichSoul(data) {
   next.memeArtistCount = Math.max(0, Number(next.memeArtistCount) || 0);
   next.memeArtist      = next.memeArtistCount > 0 || Boolean(next.memeArtist);
   next.walletCount     = Math.max(1, Number(next.walletCount) || 1);
-  next.baseHue         = soulHue(next.address);
+  next.baseHue         = sigilHue(next.address);
   return next;
 }
 
-// 3D → 2D projeksiyon (FF.rotX, FF.rotY kullanır)
+// 3D → 2D projection (uses FF.rotX, FF.rotY)
 function project3D(x3, y3, z3) {
   const ry = FF.rotY;
   const xa =  x3 * Math.cos(ry) + z3 * Math.sin(ry);
@@ -108,18 +108,18 @@ function project3D(x3, y3, z3) {
   const yb = y3 * Math.cos(rx) - za * Math.sin(rx);
   const zb = y3 * Math.sin(rx) + za * Math.cos(rx);
   const xb = xa;
-  // Z-ekseni roll (seed-based) — eksen yönünü 3D'de tekil yapar
+  // Z-axis roll (seed-based) — makes the axis direction unique in 3D
   const rz = FF.axisAz || 0;
   const xc = xb * Math.cos(rz) - yb * Math.sin(rz);
   const yc = xb * Math.sin(rz) + yb * Math.cos(rz);
   const f  = 1100;
   const s  = f / (f + zb);
-  const depth = clamp((zb / SOUL_R + 1) * 0.5, 0, 1);
+  const depth = clamp((zb / SIGIL_R + 1) * 0.5, 0, 1);
   return { x: FF.cx + xc * s, y: FF.cy + yc * s, depth, z: zb };
 }
 
-// Orbital halka üzerinde bir noktanın 3D koordinatı
-// incl = X ekseni etrafında yatırma, az = Y ekseni etrafında döndürme
+// 3D coordinate of a point on an orbital ring
+// incl = tilt around the X axis, az = rotation around the Y axis
 function ringPt(angle, radius, incl, az) {
   const x0 = Math.cos(angle) * radius;
   const y0 = Math.sin(angle) * radius * Math.sin(incl);
@@ -134,7 +134,7 @@ function togglePerf() {
   const btn = document.getElementById('perfBtn');
   btn.textContent = perfMode ? '⚡ PERF MODE' : '✦ FULL QUALITY';
   btn.classList.toggle('perf-on', perfMode);
-  if (soul) buildVisuals();
+  if (sigil) buildVisuals();
 }
 
 
@@ -153,15 +153,15 @@ function submitManual() {
     rep:         parseFloat(document.getElementById('m_rep').value)         || 0,
   };
   if (data.tdh === 0 && data.unique === 0) { showUnborn(); return; }
-  renderSoul(data);
+  renderSigil(data);
 }
 
-// ── Ana render ────────────────────────────────────────────
-function renderSoul(data) {
-  soul = enrichSoul(data);
+// ── Main render ───────────────────────────────────────────
+function renderSigil(data) {
+  sigil = enrichSigil(data);
   organism = {
-    seed: soulHash(`${soul.address}:${soul.tdh}:${soul.unique}:${soul.boost}:${soul.rep}:${soul.nic}`),
-    baseHue: soul.baseHue,
+    seed: sigilHash(`${sigil.address}:${sigil.tdh}:${sigil.unique}:${sigil.boost}:${sigil.rep}:${sigil.nic}`),
+    baseHue: sigil.baseHue,
   };
 
   const entry = document.getElementById('entry');
@@ -182,7 +182,7 @@ function renderSoul(data) {
 
   buildHUD();
   buildVisuals();
-  clearHoverState();  // yeni ruh → hover/pin sıfırla
+  clearHoverState();  // new sigil → reset hover/pin
   if (animId) cancelAnimationFrame(animId);
   lastTs = 0;
   animate(0);
@@ -194,29 +194,29 @@ function renderSoul(data) {
   const liveEl = document.getElementById('liveIndicator');
   if (liveEl) {
     liveEl.classList.remove('stale', 'refreshing');
-    liveEl.classList.toggle('visible', !!_currentAddr);  // demo modunda gizle
+    liveEl.classList.toggle('visible', !!_currentAddr);  // hide in demo mode
   }
   updateLiveTimestamp();
   startAutoRefresh();
 }
 
-// ── Soul Name generator — "modifier + archetype" şeklinde kişisel isim ──
-// Deterministik: aynı cüzdan her zaman aynı ismi alır (seed-based pick).
-// Kurala göre: Nakamoto/Artist/FullSet varsa öne çıkar, yoksa dominant parametre belirler.
+// ── Sigil Name generator — a personal name of the form "modifier + archetype" ──
+// Deterministic: the same wallet always gets the same name (seed-based pick).
+// Rule: Nakamoto/Artist/FullSet take precedence; otherwise the dominant parameter decides.
 function seededPick(arr, seed) {
   if (!arr || arr.length === 0) return '';
   return arr[(seed >>> 0) % arr.length];
 }
 
-function generateSoulName(s) {
+function generateSigilName(s) {
   if (!s) return '';
   const addr    = s.address || 'manual';
-  const seedM   = soulHash(addr + ':mod');
-  const seedC   = soulHash(addr + ':core');
+  const seedM   = sigilHash(addr + ':mod');
+  const seedC   = sigilHash(addr + ':core');
 
   // ── Modifier ──
   let modifier;
-  const tier   = (typeof getSoulClass === 'function') ? (getSoulClass(s.tdh).tier || 1) : 1;
+  const tier   = (typeof getSigilClass === 'function') ? (getSigilClass(s.tdh).tier || 1) : 1;
   const tdhN   = normalizeTDH(s.tdh || 0);
   const repN   = normalizeRep(s.rep || 0);
   const nicN   = normalizeNic(s.nic || 0);
@@ -271,7 +271,7 @@ function generateSoulName(s) {
   return `${modifier} ${core}`;
 }
 
-// Her parametre için renk noktası — orbital ring veya rare form'unun kendi rengi.
+// A color dot for each parameter — the color of its orbital ring or rare form.
 const PARAM_DOT = {
   'TDH':         'hsl(42, 85%, 72%)',     // amber (solar core + TDH ring)
   'BOOST':       'hsl(308, 85%, 72%)',    // magenta
@@ -280,8 +280,8 @@ const PARAM_DOT = {
   'REP':         'hsl(110, 70%, 68%)',    // sage
   'LEVEL':       'hsl(350, 85%, 72%)',    // coral
   'MEME ARTIST': 'rainbow',               // conic gradient
-  'FULL SET':    'hsl(155, 85%, 70%)',    // teal — thorny shell rengi
-  'NAKAMOTO':    'hsl(48, 100%, 72%)',    // altın — bracelet rengi
+  'FULL SET':    'hsl(155, 85%, 70%)',    // teal — thorny shell color
+  'NAKAMOTO':    'hsl(48, 100%, 72%)',    // gold — bracelet color
 };
 function paramDotHtml(k) {
   const c = PARAM_DOT[k];
@@ -291,24 +291,24 @@ function paramDotHtml(k) {
 }
 
 function buildHUD() {
-  const sc       = getSoulClass(soul.tdh);
-  const soulName = generateSoulName(soul);
-  document.getElementById('hudAddr').textContent     = shortAddr(soul.address);
+  const sc       = getSigilClass(sigil.tdh);
+  const sigilName = generateSigilName(sigil);
+  document.getElementById('hudAddr').textContent     = shortAddr(sigil.address);
   document.getElementById('hudClass').textContent    = sc.name;
-  document.getElementById('hudClass').style.color    = `hsl(${soul.baseHue}, 82%, 74%)`;
-  document.getElementById('hudSoulname').textContent = soulName;
-  document.getElementById('hudSoulname').style.color = `hsla(${soul.baseHue}, 60%, 82%, 0.85)`;
+  document.getElementById('hudClass').style.color    = `hsl(${sigil.baseHue}, 82%, 74%)`;
+  document.getElementById('hudSigilname').textContent = sigilName;
+  document.getElementById('hudSigilname').style.color = `hsla(${sigil.baseHue}, 60%, 82%, 0.85)`;
 
-  const artistN = soul.memeArtistCount || 0;
+  const artistN = sigil.memeArtistCount || 0;
   const params = [
-    ['TDH',         soul.tdh.toLocaleString()],
-    ['BOOST',       `×${soul.boost.toFixed(2)}`],
-    ['LEVEL',       soul.level],
-    ['UNIQUE',      soul.unique],
-    ['NIC',         soul.nic.toLocaleString()],
-    ['REP',         soul.rep.toLocaleString()],
-    ['FULL SET',    soul.fullSet  ? 'YES' : 'NO'],
-    ['NAKAMOTO',    soul.nakamoto ? 'YES' : 'NO'],
+    ['TDH',         sigil.tdh.toLocaleString()],
+    ['BOOST',       `×${sigil.boost.toFixed(2)}`],
+    ['LEVEL',       sigil.level],
+    ['UNIQUE',      sigil.unique],
+    ['NIC',         sigil.nic.toLocaleString()],
+    ['REP',         sigil.rep.toLocaleString()],
+    ['FULL SET',    sigil.fullSet  ? 'YES' : 'NO'],
+    ['NAKAMOTO',    sigil.nakamoto ? 'YES' : 'NO'],
     ['MEME ARTIST', artistN > 0 ? `${artistN} card${artistN > 1 ? 's' : ''}` : 'NO'],
   ];
   document.getElementById('hudParams').innerHTML = params
@@ -332,7 +332,7 @@ function smoothNoise(x, y, seed) {
   const uy = fy * fy * (3 - 2 * fy);
 
   function h(a, b) {
-    const n = soulHash(`${seed}:${a}:${b}`);
+    const n = sigilHash(`${seed}:${a}:${b}`);
     return (n / 0xFFFFFFFF) * 2 - 1;
   }
   return lerp(lerp(h(ix, iy), h(ix+1, iy), ux), lerp(h(ix, iy+1), h(ix+1, iy+1), ux), uy);
@@ -369,15 +369,15 @@ function flowAngle(x, y, t) {
   return angle;
 }
 
-// Partikül — soulR içinde polar koordinat.
-// isStar: true → tier-bonus partikülü (yıldız gibi parlar, canlı hue, halo'lu render).
+// Particle — polar coordinate within sigilR.
+// isStar: true → tier-bonus particle (sparkles like a star, vivid hue, halo render).
 function createParticle(rand, isStar) {
-  const r   = Math.sqrt(rand()) * FF.soulR * 0.88;
+  const r   = Math.sqrt(rand()) * FF.sigilR * 0.88;
   const a   = rand() * Math.PI * 2;
   const x   = FF.cx + Math.cos(a) * r;
   const y   = FF.cy + Math.sin(a) * r;
   const hueOffset = (rand() - 0.5) * FF.hueSpread;
-  const baseHue   = isStar ? Math.floor(rand() * 360)       // yıldız → tam spektrum
+  const baseHue   = isStar ? Math.floor(rand() * 360)       // star → full spectrum
                            : (FF.baseHue + hueOffset + 360) % 360;
   const baseSize  = lerp(FF.minSize, FF.maxSize, Math.pow(rand(), 1.6));
 
@@ -387,7 +387,7 @@ function createParticle(rand, isStar) {
     age: 0,
     maxAge:     lerp(FF.minLife, FF.maxLife, rand()),
     hue:        baseHue,
-    hueShift:   (rand() - 0.5) * (isStar ? 40 : 80),        // yıldız daha stabil
+    hueShift:   (rand() - 0.5) * (isStar ? 40 : 80),        // stars are more stable
     speed:      lerp(FF.minSpeed, FF.maxSpeed, rand()),
     size:       isStar ? baseSize * 1.5 : baseSize,
     alpha:      lerp(0.40, 0.95, rand()) * (isStar ? 1.10 : 1.0),
@@ -400,51 +400,51 @@ function createParticle(rand, isStar) {
 
 // ── buildVisuals ──────────────────────────────────────────
 function buildVisuals() {
-  if (!soul) return;
+  if (!sigil) return;
 
-  // Logical viewport boyutları (c1.width artık physical, DPR kat sayısıyla çarpılı)
+  // Logical viewport dimensions (c1.width is now physical, multiplied by DPR)
   const W    = window.innerWidth;
   const H    = window.innerHeight;
-  const rand = soulRng(organism.seed);
+  const rand = sigilRng(organism.seed);
 
-  // Önceki rotasyon açısını koru (resize'da sıfırlanmasın)
+  // Preserve previous rotation angle (don't reset on resize)
   const prevRotY = (FF && FF.rotY) ? FF.rotY : 0;
 
-  const tdhN   = normalizeTDH(soul.tdh);
-  const boostN = clamp((soul.boost - 1.0) / 1.3, 0, 1);  // 1.00→0, 1.65→0.5, 2.30→1.0
-  const levelN   = clamp(soul.level / 100, 0, 1);
-  const uniN     = clamp(soul.unique / 484, 0, 1);
-  const nicN     = normalizeNic(soul.nic);
-  const repN     = normalizeRep(soul.rep);
-  const fullSetN = soul.fullSet  ? 1.0 : 0.0;
-  const nakamoN  = soul.nakamoto ? 1.0 : 0.0;
+  const tdhN   = normalizeTDH(sigil.tdh);
+  const boostN = clamp((sigil.boost - 1.0) / 1.3, 0, 1);  // 1.00→0, 1.65→0.5, 2.30→1.0
+  const levelN   = clamp(sigil.level / 100, 0, 1);
+  const uniN     = clamp(sigil.unique / 484, 0, 1);
+  const nicN     = normalizeNic(sigil.nic);
+  const repN     = normalizeRep(sigil.rep);
+  const fullSetN = sigil.fullSet  ? 1.0 : 0.0;
+  const nakamoN  = sigil.nakamoto ? 1.0 : 0.0;
 
-  // TDH sürücülü ölçek, viewport'a uyumlu (mobilde ruh kırpılmasın, nefes alsın)
-  const rawSoulScale   = lerp(0.38, 0.90, tdhN);
-  const rawSoulR       = SOUL_R * rawSoulScale;
-  const viewportRadius = Math.min(W, H) * 0.42;  // %42 → her iki tarafta ~%8 margin
-  const soulR          = Math.min(rawSoulR, viewportRadius);
-  const soulScale      = soulR / SOUL_R;          // downstream için geri hesapla
+  // TDH-driven scale, viewport-aware (don't crop the sigil on mobile, let it breathe)
+  const rawSigilScale   = lerp(0.38, 0.90, tdhN);
+  const rawSigilR       = SIGIL_R * rawSigilScale;
+  const viewportRadius = Math.min(W, H) * 0.42;  // 42% → ~8% margin on each side
+  const sigilR          = Math.min(rawSigilR, viewportRadius);
+  const sigilScale      = sigilR / SIGIL_R;          // back-compute for downstream
 
-  // Tier (1-9) — 9 TDH kademesi, görsel "unlock"ları tetikler
-  const tier = (typeof getSoulClass === 'function')
-    ? (getSoulClass(soul.tdh).tier || 1)
+  // Tier (1-9) — 9 TDH tiers, trigger visual "unlocks"
+  const tier = (typeof getSigilClass === 'function')
+    ? (getSigilClass(sigil.tdh).tier || 1)
     : 1;
 
-  // Cüzdan-imzalı eksen: eğim + azimut → 3D'de tekil yön (parmak izi)
+  // Wallet-signed axis: tilt + azimuth → unique direction in 3D (fingerprint)
   const axisTilt = (((organism.seed >>> 0) % 10000) / 10000 - 0.5) * 0.9;   // ±0.45 rad
-  const axisAz   = (soulHash(organism.seed + 333) / 0xFFFFFFFF) * Math.PI * 2;  // 0 → 2π
+  const axisAz   = (sigilHash(organism.seed + 333) / 0xFFFFFFFF) * Math.PI * 2;  // 0 → 2π
 
-  // Chroma shimmer fazları — seed'e bağlı, her ruhun kendi "hue dansı"
-  const phaseRng    = soulRng(soulHash(organism.seed + 42));
+  // Chroma shimmer phases — seed-based, each sigil gets its own "hue dance"
+  const phaseRng    = sigilRng(sigilHash(organism.seed + 42));
   const layerPhases = LAYERS.map(() => phaseRng() * Math.PI * 2);
 
-  // REP → manyetik alan kutupları (particles magnetic field'da akar)
+  // REP → magnetic field poles (particles flow along the magnetic field)
   const poleCount = 1 + Math.floor(repN * 5);
   const poles = [];
   for (let i = 0; i < poleCount; i++) {
     const a = rand() * Math.PI * 2;
-    const r = (0.10 + rand() * 0.38) * soulR;
+    const r = (0.10 + rand() * 0.38) * sigilR;
     poles.push({
       x:        W * 0.5 + Math.cos(a) * r,
       y:        H * 0.5 + Math.sin(a) * r,
@@ -453,8 +453,8 @@ function buildVisuals() {
     });
   }
 
-  // Her orbital katmanın normalize gücü — LAYERS sırasıyla eşleşir
-  const artistN = soul.memeArtist ? 1 : 0;
+  // Normalized strength of each orbital layer — matches LAYERS order
+  const artistN = sigil.memeArtist ? 1 : 0;
   const layerStrength = [
     tdhN,     // L0: TDH
     boostN,   // L1: Boost
@@ -462,32 +462,32 @@ function buildVisuals() {
     nicN,     // L3: NIC
     repN,     // L4: REP
     levelN,   // L5: Level
-    artistN,  // L6: Meme Artist (rainbow, varsa)
+    artistN,  // L6: Meme Artist (rainbow, if any)
   ];
 
   FF = {
     cx: W * 0.5, cy: H * 0.5,
-    baseHue: soul.baseHue,
+    baseHue: sigil.baseHue,
 
-    // Form ölçeği + eksen (tilt + azimut = 3D'de tekil yön)
-    soulScale, soulR, axisTilt, axisAz,
+    // Form scale + axis (tilt + azimuth = unique direction in 3D)
+    sigilScale, sigilR, axisTilt, axisAz,
 
-    // Chroma shimmer için katman fazları
+    // Layer phases for chroma shimmer
     layerPhases,
 
     seed1: organism.seed,
-    seed2: soulHash(organism.seed + 1),
-    seed3: soulHash(organism.seed + 2),
+    seed2: sigilHash(organism.seed + 1),
+    seed3: sigilHash(organism.seed + 2),
 
     scale:         lerp(0.0022, 0.0060, 1 - tdhN),
-    // Base partiküller kristal tozu gibi (baseHue tabanlı, küçük).
-    // Tier bonus partikülleri yıldız modunda parlar (tam spektrum, halo'lu).
-    // perfMode: base tavanı ve star partikülleri düşer (en büyük perf kazancı burada)
+    // Base particles are like crystal dust (baseHue-based, small).
+    // Tier-bonus particles sparkle in star mode (full spectrum, with halo).
+    // perfMode: drops the base cap and star particles (the biggest perf win)
     baseParticleCount: Math.floor(lerp(180, perfMode ? 220 : 620, tdhN)),
     starParticleCount: perfMode ? 0 : Math.max(0, tier - 2) * 50,
     get particleCount() { return this.baseParticleCount + this.starParticleCount; },
 
-    // Tier bilgisi — draw fonksiyonları unlock'lar için kullanır
+    // Tier info — draw functions use it for unlocks
     tier,
 
     oct2Scale: lerp(1.6, 4.8, nicN),
@@ -498,30 +498,30 @@ function buildVisuals() {
     poles,
     poleDecay: lerp(0.0018, 0.005, repN),
 
-    hueSpread:     lerp(60, 220, uniN),           // Unique → irisli spektrum genişliği
-    timeScale:     lerp(0.15, 0.045, boostN),     // Boost → akış hızı
-    minSize:       lerp(0.6, 1.4, uniN),          // Partikül nokta çapı
+    hueSpread:     lerp(60, 220, uniN),           // Unique → iridescent spectrum width
+    timeScale:     lerp(0.15, 0.045, boostN),     // Boost → flow speed
+    minSize:       lerp(0.6, 1.4, uniN),          // Particle dot diameter
     maxSize:       lerp(1.6, 3.2, uniN),
     minSpeed:      lerp(0.40, 0.9, tdhN),
     maxSpeed:      lerp(1.0,  2.8, tdhN),
-    minLife:       lerp(140, 340, levelN),        // Level → ömür (netlik)
+    minLife:       lerp(140, 340, levelN),        // Level → lifespan (clarity)
     maxLife:       lerp(320, 880, tdhN),
 
-    nakamoto: soul.nakamoto,
-    fullSet:  soul.fullSet,
+    nakamoto: sigil.nakamoto,
+    fullSet:  sigil.fullSet,
 
     layerStrength,
 
-    // 3D — rotY sürekli artar, rotX eksen eğimi + hafif nefes salınımı
+    // 3D — rotY increases continuously, rotX is axis tilt + a gentle breathing sway
     rotX: axisTilt,
     rotY: prevRotY,
 
   };
 
-  // Sparkle sabit noktaları — kristal yıldız kesişimleri
+  // Fixed sparkle points — crystal star intersections
   FF.sparkles = buildSparkles(organism.seed, repN, levelN, tier);
 
-  // Particle canvas (dots — trail YOK, her frame clear). DPR-scaled buffer, logical çizim.
+  // Particle canvas (dots — NO trail, cleared every frame). DPR-scaled buffer, logical draw.
   const dpr          = Math.min(window.devicePixelRatio || 1, 2.5);
   trailCanvas        = document.createElement('canvas');
   trailCanvas.width  = Math.round(W * dpr);
@@ -531,9 +531,9 @@ function buildVisuals() {
   FF.logicalW        = W;
   FF.logicalH        = H;
 
-  // Partikülleri oluştur, yaşları dağıt. İlk baseCount normal, kalanı yıldız.
+  // Create particles, distribute their ages. First baseCount are normal, the rest are stars.
   particles = [];
-  const rand2 = soulRng(organism.seed);
+  const rand2 = sigilRng(organism.seed);
   const baseN = FF.baseParticleCount;
   const total = FF.particleCount;
   for (let i = 0; i < total; i++) {
@@ -545,14 +545,14 @@ function buildVisuals() {
 }
 
 
-// ── Animasyon döngüsü ─────────────────────────────────────
+// ── Animation loop ────────────────────────────────────────
 function animate(ts) {
   const dt = lastTs ? Math.min((ts - lastTs) * 0.001, 0.05) : 0.016;
   lastTs = ts;
   T      = ts * 0.001;
   animId = requestAnimationFrame(animate);
 
-  // Kendi ekseninde dönüş: Y = master 30s loop, X = eksen eğimi + küçük nefes
+  // Rotation on its own axis: Y = 30s master loop, X = axis tilt + a small breath
   FF.rotY += dt * LOOP_ROT_Y;
   FF.rotX  = FF.axisTilt + Math.sin(T * 0.17) * 0.08 + Math.sin(T * 0.09) * 0.04;
 
@@ -561,17 +561,17 @@ function animate(ts) {
   drawForm();
   drawOverlay();
 
-  // Halkalar döndüğü için her frame'de hover'ı taze tut (cursor sabitse bile)
+  // Rings rotate, so refresh hover every frame (even if the cursor is still)
   updateHoverFromFrame();
 }
 
-// ── Partikül güncelleme — nokta/yıldız (iz YOK, her frame clear) ──
+// ── Particle update — dots/stars (NO trail, cleared every frame) ──
 function updateParticles() {
   if (!trailCtx) return;
   const W = FF.logicalW || window.innerWidth;
   const H = FF.logicalH || window.innerHeight;
 
-  // Her frame temizle — iz birikmesin
+  // Clear every frame — don't let a trail build up
   trailCtx.clearRect(0, 0, W, H);
   trailCtx.globalCompositeOperation = 'lighter';
 
@@ -580,7 +580,7 @@ function updateParticles() {
 
     if (p.age >= p.maxAge) {
       const wasStar = p.isStar;
-      const r = soulRng(soulHash(organism.seed + p.age + Math.floor(T * 100)));
+      const r = sigilRng(sigilHash(organism.seed + p.age + Math.floor(T * 100)));
       Object.assign(p, createParticle(r, wasStar));
       continue;
     }
@@ -589,15 +589,15 @@ function updateParticles() {
     const fade     = Math.min(1, lifeFrac * 10) * Math.min(1, (1 - lifeFrac) * 10);
     if (fade < 0.02) continue;
 
-    // Manyetik akış — REP pole'larıyla kavisli field lines
+    // Magnetic flow — curved field lines from REP poles
     const angle = flowAngle(p.x, p.y, T);
     p.vx = p.vx * 0.88 + Math.cos(angle) * p.speed * 0.12;
     p.vy = p.vy * 0.88 + Math.sin(angle) * p.speed * 0.12;
 
-    // Soul sınırı
+    // Sigil boundary
     const dxC = p.x - FF.cx, dyC = p.y - FF.cy;
     const distC = Math.sqrt(dxC * dxC + dyC * dyC);
-    if (distC > FF.soulR * 0.92) {
+    if (distC > FF.sigilR * 0.92) {
       p.vx -= (dxC / distC) * 0.5;
       p.vy -= (dyC / distC) * 0.5;
     }
@@ -605,13 +605,13 @@ function updateParticles() {
     p.x += p.vx;
     p.y += p.vy;
 
-    // 3D projeksiyon — axisTilt rotX'in içinde zaten
+    // 3D projection — axisTilt is already baked into rotX
     const dx = p.x - FF.cx, dy = p.y - FF.cy;
     const z_raw = dx * Math.sin(FF.rotY) - dy * Math.sin(FF.rotX) * Math.cos(FF.rotY);
     const ps    = 1 + z_raw * 0.00040;
     const sx    = (dx * Math.cos(FF.rotY) + dy * Math.sin(FF.rotX) * Math.sin(FF.rotY)) * ps;
     const sy    = dy * Math.cos(FF.rotX) * ps;
-    // Z roll — eksen azimutu
+    // Z roll — axis azimuth
     const rz = FF.axisAz || 0;
     const px = FF.cx + sx * Math.cos(rz) - sy * Math.sin(rz);
     const py = FF.cy + sx * Math.sin(rz) + sy * Math.cos(rz);
@@ -623,7 +623,7 @@ function updateParticles() {
     const rad     = p.size * lerp(0.55, 1.4, depth);
 
     if (p.isStar) {
-      // Tier bonus partikülü — yıldız: halo + crisp sıcak beyaz çekirdek, tam doymuş
+      // Tier-bonus particle — star: halo + crisp warm-white core, fully saturated
       const g = trailCtx.createRadialGradient(px, py, 0, px, py, rad * 3.5);
       g.addColorStop(0,    `hsla(${hue}, 100%, 92%, ${alpha * 0.80})`);
       g.addColorStop(0.35, `hsla(${hue}, 100%, 72%, ${alpha * 0.40})`);
@@ -638,7 +638,7 @@ function updateParticles() {
       trailCtx.arc(px, py, rad * 0.85, 0, Math.PI * 2);
       trailCtx.fill();
     } else {
-      // Normal partikül — tek arc
+      // Normal particle — single arc
       trailCtx.fillStyle = `hsla(${hue}, 88%, ${lerp(72, 95, depth)}%, ${alpha})`;
       trailCtx.beginPath();
       trailCtx.arc(px, py, rad, 0, Math.PI * 2);
@@ -647,16 +647,16 @@ function updateParticles() {
   }
 }
 
-// ── Arka plan ─────────────────────────────────────────────
+// ── Background ────────────────────────────────────────────
 function drawBackground() {
   const W = FF.logicalW || window.innerWidth;
   const H = FF.logicalH || window.innerHeight;
   ctx1.fillStyle = '#000';
   ctx1.fillRect(0, 0, W, H);
 
-  // Çok hafif cüzdan-hue aurası — siyah boşluğu vurgulayan ışıltı
-  const hue  = soul.baseHue;
-  const aura = ctx1.createRadialGradient(FF.cx, FF.cy, 0, FF.cx, FF.cy, FF.soulR * 1.25);
+  // Very soft wallet-hue aura — a glow that accents the black void
+  const hue  = sigil.baseHue;
+  const aura = ctx1.createRadialGradient(FF.cx, FF.cy, 0, FF.cx, FF.cy, FF.sigilR * 1.25);
   aura.addColorStop(0,   `hsla(${hue}, 70%, 11%, 0.35)`);
   aura.addColorStop(0.5, `hsla(${hue}, 60%, 6%, 0.12)`);
   aura.addColorStop(1,   'rgba(0,0,0,0)');
@@ -664,42 +664,42 @@ function drawBackground() {
   ctx1.fillRect(0, 0, W, H);
 }
 
-// ── Orbital ring formları ─────────────────────────────────
+// ── Orbital ring forms ────────────────────────────────────
 function drawOrbitalForms(ctx) {
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
 
   const segs   = perfMode ? 72 : 144;
 
-  const rainbowSpeed = 360 / 30;  // 30s'de tam tur (derece/sn)
+  const rainbowSpeed = 360 / 30;  // full turn every 30s (degrees/sec)
 
   for (let li = 0; li < LAYERS.length; li++) {
     const layer = LAYERS[li];
-    // Koşullu katman — sağlamıyorsa çizme (ör. artist)
-    if (layer.onlyIf && !soul[layer.onlyIf]) continue;
+    // Conditional layer — skip if the condition isn't met (e.g. artist)
+    if (layer.onlyIf && !sigil[layer.onlyIf]) continue;
 
     const strength = FF.layerStrength[li] || 0;
-    // Hover/pin vurgusu — fokus halinde alpha/width çarpanları artar
+    // Hover/pin highlight — alpha/width multipliers bump up when focused
     const focused  = (layer.key === _hoveredLayerKey || layer.key === _pinnedLayerKey);
     const focusMul = focused ? 1.55 : 1.0;
     const eff      = (0.12 + strength * 0.88) * focusMul;
 
-    const radius = layer.rf * FF.soulR;
+    const radius = layer.rf * FF.sigilR;
     const staticHue = chromaHue(layer.hue, FF.layerPhases[li] || 0);
-    // Rainbow: hue segmente göre değişir + zamanla döner; aksi halde tek hue
+    // Rainbow: hue varies per segment and rotates over time; otherwise a single hue
     const hueAt = layer.rainbow
       ? (idx, total) => (((idx / total) * 360) + T * rainbowSpeed) % 360
       : () => staticHue;
 
-    // LEVEL için progress arc — sadece level/100 oranı parlak, kalanı soluk
+    // Progress arc for LEVEL — only the level/100 fraction is bright, the rest is dim
     const isLevel  = layer.key === 'level';
-    const levelEnd = isLevel ? Math.min(1, (soul.level || 0) / 100) : 1;
-    // Segment i için alpha çarpanı (0=sönük, 1=parlak)
+    const levelEnd = isLevel ? Math.min(1, (sigil.level || 0) / 100) : 1;
+    // Alpha multiplier for segment i (0=dim, 1=bright)
     const levelAlphaAt = isLevel
       ? (i, total) => (i / total < levelEnd ? 1.0 : 0.15)
       : () => 1.0;
 
-    // Ring noktaları
+    // Ring points
     const pts = [];
     for (let i = 0; i <= segs; i++) {
       const angle = (i / segs) * Math.PI * 2;
@@ -708,7 +708,7 @@ function drawOrbitalForms(ctx) {
       pts.push(p2);
     }
 
-    // Pass 1 — geniş outer glow
+    // Pass 1 — wide outer glow
     const glowWidth = 2.4 + eff * 4.6;
     const glowAlpha = 0.07 + eff * 0.16;
     for (let i = 0; i < segs; i++) {
@@ -724,7 +724,7 @@ function drawOrbitalForms(ctx) {
       ctx.stroke();
     }
 
-    // Pass 2 — renkli gövde
+    // Pass 2 — colored body
     const baseAlpha = 0.28 + eff * 0.52;
     const baseWidth = 0.8  + eff * 3.0;
     for (let i = 0; i < segs; i++) {
@@ -743,7 +743,7 @@ function drawOrbitalForms(ctx) {
       ctx.stroke();
     }
 
-    // Pass 3 — crystal edge: ön yarıda ince, yüksek-lümin kenar (perf'te atlanır)
+    // Pass 3 — crystal edge: thin, high-luminance edge on the front half (skipped in perf mode)
     if (!perfMode) {
       for (let i = 0; i < segs; i++) {
         const p1    = pts[i], p2 = pts[i + 1];
@@ -762,7 +762,7 @@ function drawOrbitalForms(ctx) {
       }
     }
 
-    // BOOST companion — halkanın dışında paralel altın çizgi, boost ile belirir
+    // BOOST companion — a parallel golden line outside the ring, revealed by boost
     if (layer.key === 'boost' && strength > 0.05) {
       const companionR = radius * 1.05;
       for (let i = 0; i < segs; i++) {
@@ -783,18 +783,18 @@ function drawOrbitalForms(ctx) {
       }
     }
 
-    // Halka üzerinde kayan parlak düğümler
+    // Bright nodes sliding along the ring
     const dir = li % 2 === 0 ? 1 : -1;
     const dotAngularPhase = T * LOOP_DOT * (0.65 + li * 0.08) * dir;
 
     if (layer.key === 'unique') {
-      // ── 484-boncuklu kolye: her slot bir meme, sahip olunan N tanesi parlar ──
+      // ── 484-bead necklace: each slot is one meme, the N you own glow ──
       const TOTAL_SLOTS = 484;
-      const owned       = Math.min(soul.unique || 0, TOTAL_SLOTS);
+      const owned       = Math.min(sigil.unique || 0, TOTAL_SLOTS);
       if (owned > 0) {
-        // Bead boyutu: az unique → büyük (görünür), çok unique → küçük (çakışmasın)
+        // Bead size: few unique → large (visible), many unique → small (no overlap)
         const densityT   = Math.min(1, owned / 200);
-        const beadRadius = lerp(2.6, 0.9, densityT) * FF.soulScale;
+        const beadRadius = lerp(2.6, 0.9, densityT) * FF.sigilScale;
 
         for (let i = 0; i < owned; i++) {
           const ang = (i / TOTAL_SLOTS) * Math.PI * 2 + dotAngularPhase;
@@ -820,7 +820,7 @@ function drawOrbitalForms(ctx) {
         }
       }
     } else {
-      // Diğer halkalar — mevcut orbital dot davranışı
+      // Other rings — existing orbital-dot behavior
       const dotN = perfMode ? (3 + Math.floor(eff * 6)) : (4 + Math.floor(eff * 12));
       for (let i = 0; i < dotN; i++) {
         const ang   = (i / dotN) * Math.PI * 2 + dotAngularPhase;
@@ -828,7 +828,7 @@ function drawOrbitalForms(ctx) {
         const p2    = project3D(p3.x, p3.y, p3.z);
         const r     = (1.6 + eff * 3.2) * (0.40 + p2.depth * 0.80);
         const baseDA= (0.28 + eff * 0.55) * (0.30 + p2.depth * 0.70);
-        // LEVEL'da dotlar sadece level/100 aralığında parlasın
+        // On LEVEL, only the dots within the level/100 range should glow
         const dotLvl = isLevel ? (i / dotN < levelEnd ? 1.0 : 0.10) : 1.0;
         const dA     = baseDA * dotLvl;
         const hue    = hueAt(i, dotN);
@@ -853,7 +853,7 @@ function drawOrbitalForms(ctx) {
   ctx.restore();
 }
 
-// ── Katman birleştirme — Orrery form sıralaması ───────────
+// ── Layer composition — Orrery form order ─────────────────
 function drawForm() {
   if (!trailCanvas) return;
   const W = FF.logicalW || window.innerWidth;
@@ -861,48 +861,48 @@ function drawForm() {
   ctx2.clearRect(0, 0, W, H);
   ctx2.globalCompositeOperation = 'source-over';
 
-  // 1. Kristal partikül atmosferi — explicit logical dims ile çiz (DPR buffer)
+  // 1. Crystal particle atmosphere — draw with explicit logical dims (DPR buffer)
   ctx2.drawImage(trailCanvas, 0, 0, W, H);
 
-  // 2. Armiller iskelet (soluk küre çerçevesi)
+  // 2. Armillary frame (faint sphere frame)
   drawArmillaryFrame(ctx2);
 
-  // 3. Merkezi güneş (TDH — kompakt kristal burst)
+  // 3. Central sun (TDH — compact crystal burst)
   drawSolarCore(ctx2, FF.cx, FF.cy);
 
-  // 3b. Consolidation uydular (birleşik cüzdanlar = ay'lar)
+  // 3b. Consolidation satellites (merged wallets = moons)
   drawConsolidationMoons(ctx2);
 
-  // 4. REP inbound rays — dışarıdan içeri akan sinyaller (halkaya varıyor)
+  // 4. REP inbound rays — signals flowing inward from outside (arriving at the ring)
   drawRepRays(ctx2);
 
-  // 5. Orbital halkalar (6 skaler + artist rainbow halkası varsa)
+  // 5. Orbital rings (6 scalars + artist rainbow ring if applicable)
   drawOrbitalForms(ctx2);
 
-  // 5b. MEME ARTIST — ana halka üzerinde bilezik boncukları (count ≥ 2 ise)
+  // 5b. MEME ARTIST — bracelet beads on the main ring (when count ≥ 2)
   drawArtistBeads(ctx2);
 
-  // 6. Kristal sparkle yıldızları (REP/Level yoğunluk)
+  // 6. Crystal sparkle stars (REP/Level density)
   drawIntersectionSparkles(ctx2);
 
-  // 6. FULL SET — dikenli dış çember (yoksa görünmez)
+  // 6. FULL SET — thorny outer shell (invisible if not owned)
   drawFullSetThornyShell(ctx2);
 
-  // 7. NAKAMOTO — altın bilezik + hızlı altın top (yoksa görünmez)
+  // 7. NAKAMOTO — gold bracelet + fast gold orb (invisible if not owned)
   drawNakamotoBracelet(ctx2);
 
-  // 8. TIER UNLOCKS — tier'a özgü katmanlar (şartlı, fonksiyonlar kendini gater)
+  // 8. TIER UNLOCKS — tier-specific layers (conditional; functions gate themselves)
   drawPrestigeRing(ctx2);     // tier 5+ (ANCHOR)
   drawCosmicDust(ctx2);       // tier 8+ (LEGEND)
   drawPhenomenonAura(ctx2);   // tier 9   (PHENOMENON)
 }
 
-// ── Kristal sparkle sphere — kesişim yıldızları ──
-// Küre üzerinde Fibonacci-dağılımlı sabit noktalar, her biri 4-kollu lens flare.
-// REP yoğunluklarını, Level netliğini etkiler.
+// ── Crystal sparkle sphere — intersection stars ──
+// Fibonacci-distributed fixed points on a sphere, each a 4-arm lens flare.
+// REP drives density, Level drives clarity.
 function buildSparkles(seed, repN, levelN, tier) {
-  const rng       = soulRng(soulHash(seed + 777));
-  const tierBonus = Math.max(0, (tier || 1) - 5) * 2;   // PILLAR+ için bonus
+  const rng       = sigilRng(sigilHash(seed + 777));
+  const tierBonus = Math.max(0, (tier || 1) - 5) * 2;   // bonus for PILLAR+
   const full      = 8 + Math.floor(repN * 10) + Math.floor(levelN * 5) + tierBonus;
   const N         = perfMode ? Math.max(4, Math.floor(full * 0.5)) : full;
   const phi  = Math.PI * (3 - Math.sqrt(5));
@@ -925,7 +925,7 @@ function buildSparkles(seed, repN, levelN, tier) {
 
 function drawIntersectionSparkles(ctx) {
   if (!FF.sparkles) return;
-  const radius = FF.soulR * 0.62;  // halkaların orta ağırlığında
+  const radius = FF.sigilR * 0.62;  // around the midweight of the rings
 
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
@@ -936,7 +936,7 @@ function drawIntersectionSparkles(ctx) {
     if (twinkle < 0.08) continue;
 
     const hue = chromaHue(sp.hue, sp.phase);
-    const sz  = sp.size * (3.5 + p.depth * 3.5) * twinkle * FF.soulScale;
+    const sz  = sp.size * (3.5 + p.depth * 3.5) * twinkle * FF.sigilScale;
 
     // 4 kollu crystal ray — lens flare
     for (let ray = 0; ray < 4; ray++) {
@@ -956,7 +956,7 @@ function drawIntersectionSparkles(ctx) {
       ctx.stroke();
     }
 
-    // Renkli halo + beyaz çekirdek
+    // Colored halo + white core
     const glow = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, sz * 1.6);
     glow.addColorStop(0,    `hsla(${hue}, 100%, 97%, ${twinkle})`);
     glow.addColorStop(0.35, `hsla(${hue}, 95%, 80%, ${0.45 * twinkle})`);
@@ -975,11 +975,11 @@ function drawIntersectionSparkles(ctx) {
   ctx.restore();
 }
 
-// ── Armiller iskelet — ekvator + polar meridyen, soluk küre hissi ──
-// Tier 4+ (RESONANCE) için ikinci bir çerçeve çifti eklenir → daha dolu küre
+// ── Armillary frame — equator + polar meridian, a faint sphere feel ──
+// For Tier 4+ (RESONANCE), a second pair of frames is added → a fuller sphere
 function drawArmillaryFrame(ctx) {
   const segs   = perfMode ? 64 : 128;
-  const radius = FF.soulR * 0.96;
+  const radius = FF.sigilR * 0.96;
   const frames = [
     { incl: 0,              az: 0 },
     { incl: Math.PI * 0.5,  az: Math.PI * 0.5 },
@@ -1015,28 +1015,28 @@ function drawArmillaryFrame(ctx) {
   ctx.restore();
 }
 
-// ── MEME ARTIST — iridescent spektrum boncukları (her ekstra kart için bir inci) ──
-// Ana artist halkası LAYERS'ta rf 0.86'da. Count ≥ 2 ise ana halka üzerine
-// (count − 1) inci yerleşir ve ring ile birlikte döner.
-// Her inci = 3-hue'lu pearl gradient (spektrum sheen) + off-center highlight.
-// Cap: artist-index'teki maksimum kart sayısı (bugün 6529er=25; rebuild ile dinamik).
+// ── MEME ARTIST — iridescent spectrum beads (one pearl per extra card) ──
+// The main artist ring lives at rf 0.86 in LAYERS. When count ≥ 2, (count − 1)
+// pearls sit on top of the main ring and rotate with it.
+// Each pearl = a 3-hue pearl gradient (spectrum sheen) + off-center highlight.
+// Cap: the maximum card count in the artist index (today 6529er=25; dynamic via rebuild).
 function drawArtistBeads(ctx) {
-  const count = soul.memeArtistCount || 0;
-  if (!soul.memeArtist || count < 2) return;
+  const count = sigil.memeArtistCount || 0;
+  if (!sigil.memeArtist || count < 2) return;
 
-  // Dinamik cap: koleksiyondaki en verimli sanatçıyı tavan say
+  // Dynamic cap: use the most prolific artist in the collection as the ceiling
   const collectionMax = (_artistIndex && _artistIndex._maxCount) || 25;
   const beadN = Math.min(collectionMax - 1, count - 1);
 
-  // Ana artist halkasının parametreleri (LAYERS son girdisi)
+  // Parameters of the main artist ring (last entry in LAYERS)
   const artistLayer = LAYERS[LAYERS.length - 1];
-  const radius = artistLayer.rf * FF.soulR;
+  const radius = artistLayer.rf * FF.sigilR;
   const incl   = artistLayer.incl;
   const az     = artistLayer.az;
 
-  const beadR        = 10 * FF.soulScale + 3;      // daha belirgin (önce 7*s+2)
-  const rainbowSpeed = 360 / 30;                   // ana halka ile aynı ritim
-  const orbitPhase   = T * LOOP_DOT * 0.65;        // diğer ring dot'larıyla aynı hız
+  const beadR        = 10 * FF.sigilScale + 3;      // more prominent (was 7*s+2)
+  const rainbowSpeed = 360 / 30;                   // same cadence as the main ring
+  const orbitPhase   = T * LOOP_DOT * 0.65;        // same speed as the other ring dots
 
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
@@ -1048,13 +1048,13 @@ function drawArtistBeads(ctx) {
     const depth = p2.depth;
     const r     = beadR * (0.60 + depth * 0.60);
 
-    // Spektrum pozisyonu — her inci farklı renk ailesinde (rainbow ring ile senkron)
+    // Spectrum position — each pearl sits in a different color family (in sync with the rainbow ring)
     const baseHue = (((i / beadN) * 360) + T * rainbowSpeed) % 360;
-    const h1 = (baseHue - 48 + 360) % 360;   // sol-komşu hue
-    const h2 = baseHue;                       // ana hue
-    const h3 = (baseHue + 48) % 360;          // sağ-komşu hue
+    const h1 = (baseHue - 48 + 360) % 360;   // left-neighbor hue
+    const h2 = baseHue;                       // main hue
+    const h3 = (baseHue + 48) % 360;          // right-neighbor hue
 
-    // 1) Dış rainbow glow — belirgin, yayılan (perf'te atlanır)
+    // 1) Outer rainbow glow — pronounced, spreading (skipped in perf mode)
     if (!perfMode) {
       const outer = ctx.createRadialGradient(p2.x, p2.y, 0, p2.x, p2.y, r * 3.2);
       outer.addColorStop(0,    `hsla(${h2}, 100%, 88%, ${0.50 + depth * 0.30})`);
@@ -1066,7 +1066,7 @@ function drawArtistBeads(ctx) {
       ctx.fill();
     }
 
-    // 2) İnci gövdesi — off-center highlight + 3-hue iridescent geçiş (prizma sheen)
+    // 2) Pearl body — off-center highlight + 3-hue iridescent gradient (prism sheen)
     const offX = -r * 0.35;
     const offY = -r * 0.35;
     const pearl = ctx.createRadialGradient(p2.x + offX, p2.y + offY, 0, p2.x, p2.y, r);
@@ -1079,14 +1079,14 @@ function drawArtistBeads(ctx) {
     ctx.arc(p2.x, p2.y, r, 0, Math.PI * 2);
     ctx.fill();
 
-    // 3) Crisp outline (tanımı belirginleştirir)
+    // 3) Crisp outline (sharpens the pearl's definition)
     ctx.beginPath();
     ctx.arc(p2.x, p2.y, r, 0, Math.PI * 2);
     ctx.strokeStyle = `hsla(${h2}, 100%, ${85 + depth * 10}%, ${0.45 + depth * 0.30})`;
     ctx.lineWidth   = 1.0 + depth * 0.6;
     ctx.stroke();
 
-    // 4) Parlak highlight noktası — inci shimmer'ı (perf'te atlanır)
+    // 4) Bright highlight dot — pearl shimmer (skipped in perf mode)
     if (!perfMode) {
       ctx.beginPath();
       ctx.arc(p2.x + offX * 0.7, p2.y + offY * 0.7, r * 0.28, 0, Math.PI * 2);
@@ -1098,12 +1098,12 @@ function drawArtistBeads(ctx) {
   ctx.restore();
 }
 
-// ── TIER UNLOCKS — tier'a özgü imza efektleri ────────────────────
+// ── TIER UNLOCKS — tier-specific signature effects ────────────────
 
-// Tier 5+ (ANCHOR): Soluk beyaz prestij halkası — orbital grubun hemen dışında
+// Tier 5+ (ANCHOR): Faint white prestige ring — just outside the orbital group
 function drawPrestigeRing(ctx) {
   if (!FF || (FF.tier || 1) < 5) return;
-  const radius = FF.soulR * 0.83;
+  const radius = FF.sigilR * 0.83;
   const segs   = perfMode ? 64 : 128;
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
@@ -1125,23 +1125,23 @@ function drawPrestigeRing(ctx) {
   ctx.restore();
 }
 
-// Tier 8+ (LEGEND): Ruhun dış sınırında yavaş sürüklenen nadir kozmik toz
+// Tier 8+ (LEGEND): Rare cosmic dust drifting slowly at the sigil's outer edge
 function drawCosmicDust(ctx) {
   if (!FF || (FF.tier || 1) < 8) return;
   const count = perfMode ? 20 : 42;
-  const rng   = soulRng(soulHash(organism.seed + 853));
+  const rng   = sigilRng(sigilHash(organism.seed + 853));
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
   for (let i = 0; i < count; i++) {
-    const r          = FF.soulR * (0.92 + rng() * 0.22);
+    const r          = FF.sigilR * (0.92 + rng() * 0.22);
     const baseA      = rng() * Math.PI * 2;
     const driftSpeed = lerp(0.006, 0.022, rng());
     const a          = baseA + T * driftSpeed;
     const x          = Math.cos(a) * r;
     const z          = Math.sin(a) * r;
-    const y          = (rng() - 0.5) * 48 * FF.soulScale;
+    const y          = (rng() - 0.5) * 48 * FF.sigilScale;
     const p          = project3D(x, y, z);
-    const size       = (0.7 + rng() * 0.9) * FF.soulScale;
+    const size       = (0.7 + rng() * 0.9) * FF.sigilScale;
     const twinkle    = 0.35 + Math.sin(T * LOOP_SPARKLE * 0.35 + i * 0.73) * 0.65;
     const hue        = Math.floor(rng() * 360);
     const alpha      = 0.28 * twinkle * p.depth;
@@ -1154,7 +1154,7 @@ function drawCosmicDust(ctx) {
   ctx.restore();
 }
 
-// Tier 9 (PHENOMENON): 10s'de bir ~1.5s süren nadir altın corona flaşı
+// Tier 9 (PHENOMENON): A rare golden corona flash, ~1.5s long, once every 10s
 function drawPhenomenonAura(ctx) {
   if (!FF || (FF.tier || 1) < 9) return;
   const period = 10;
@@ -1164,8 +1164,8 @@ function drawPhenomenonAura(ctx) {
   const intensity = Math.sin(progress * Math.PI) * (perfMode ? 0.5 : 1.0);
   if (intensity < 0.05) return;
 
-  const inner = FF.soulR * 0.98;
-  const outer = FF.soulR * 1.20;
+  const inner = FF.sigilR * 0.98;
+  const outer = FF.sigilR * 1.20;
 
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
@@ -1181,20 +1181,20 @@ function drawPhenomenonAura(ctx) {
   ctx.restore();
 }
 
-// ── CONSOLIDATION — birleşik cüzdanlar güneşin etrafında ay'lar olarak ──
-// walletCount > 1 ise N-1 belirgin satellite, TDH güneşinin flare alanı DIŞINDA.
+// ── CONSOLIDATION — merged wallets shown as moons around the sun ──
+// If walletCount > 1, N-1 prominent satellites sit OUTSIDE the TDH sun's flare zone.
 function drawConsolidationMoons(ctx) {
-  const count = Math.max(1, soul.walletCount || 1);
+  const count = Math.max(1, sigil.walletCount || 1);
   if (count <= 1) return;
   const moonN = count - 1;
 
-  // Orbit radius güneş flare'inin bitiş bölgesinin ötesinde olmalı
-  // Flare max ≈ coreR × (4.5 + tdhN*3 + boostN*2.5) → çok uzak
-  // Moons için: TDH halkasının iç çeperine yakın ama ondan içeride
-  const tdhRingR  = LAYERS[0].rf * FF.soulR;        // ≈ 0.18 × soulR
-  const orbitR    = tdhRingR * 0.65;                // TDH halkasının %65'i — flare'dan kurtulur
-  const moonR     = 6 * FF.soulScale + 3;           // belirgin boyut
-  const hue       = soul.baseHue;
+  // Orbit radius must be beyond where the sun's flare ends
+  // Flare max ≈ coreR × (4.5 + tdhN*3 + boostN*2.5) → very far out
+  // For the moons: close to the inner wall of the TDH ring, but just inside it
+  const tdhRingR  = LAYERS[0].rf * FF.sigilR;        // ≈ 0.18 × sigilR
+  const orbitR    = tdhRingR * 0.65;                // 65% of the TDH ring — clears the flare
+  const moonR     = 6 * FF.sigilScale + 3;           // prominent size
+  const hue       = sigil.baseHue;
   const rotPeriod = 18;
   const rotOffset = (T / rotPeriod) * Math.PI * 2;
 
@@ -1208,7 +1208,7 @@ function drawConsolidationMoons(ctx) {
     const p = project3D(x, 0, z);
     const d = p.depth;
 
-    // Dış halo — geniş ve parlak
+    // Outer halo — wide and bright
     const glow = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, moonR * 5);
     glow.addColorStop(0,    `hsla(${hue}, 95%, 92%, ${0.75 + d * 0.25})`);
     glow.addColorStop(0.3,  `hsla(${hue}, 100%, 76%, ${0.40 + d * 0.25})`);
@@ -1219,7 +1219,7 @@ function drawConsolidationMoons(ctx) {
     ctx.arc(p.x, p.y, moonR * 5, 0, Math.PI * 2);
     ctx.fill();
 
-    // Sıcak çekirdek
+    // Warm core
     ctx.beginPath();
     ctx.arc(p.x, p.y, moonR * 0.5, 0, Math.PI * 2);
     ctx.fillStyle = `hsla(0, 0%, 100%, ${0.90 + d * 0.10})`;
@@ -1229,25 +1229,25 @@ function drawConsolidationMoons(ctx) {
   ctx.restore();
 }
 
-// ── REP — Inbound Rays (dışarıdan REP halkasına akan sinyaller) ──
-// Başkalarından sana gelen sosyal sermaye; ray sayısı sqrt(rep/4M) ile ölçeklenir.
-// Her ray üzerinde içeri doğru kayan parlak bir sinyal noktası var.
+// ── REP — Inbound Rays (signals flowing from outside into the REP ring) ──
+// Social capital coming to you from others; ray count scales with sqrt(rep/4M).
+// Each ray carries a bright signal dot traveling inward.
 function drawRepRays(ctx) {
-  const rep = soul.rep || 0;
+  const rep = sigil.rep || 0;
   if (rep <= 0) return;
 
   const repScale  = Math.min(1, Math.sqrt(rep / 4_000_000));
-  // perfMode'da ray max'ı 20 ile sınırlı (full 50)
+  // In perfMode the ray cap is 20 (full 50)
   const rayCount  = 4 + Math.floor(repScale * (perfMode ? 16 : 46));
-  const outerR    = FF.soulR * 0.97;
-  const innerR    = FF.soulR * 0.66;                 // REP halkasının radyusu
+  const outerR    = FF.sigilR * 0.97;
+  const innerR    = FF.sigilR * 0.66;                 // radius of the REP ring
   const baseHue   = 110;                             // sage
-  const travelSec = 4.0;                             // 4s'de sinyal içeri varır
+  const travelSec = 4.0;                             // signal reaches inward in 4s
   const focused   = (_hoveredLayerKey === 'rep' || _pinnedLayerKey === 'rep');
   const focusMul  = focused ? 1.5 : 1.0;
 
-  // Ray yönlerini Fibonacci sphere ile seed-jittered üret (her cüzdana özgü yıldız deseni)
-  const rng = soulRng(soulHash(organism.seed + 607));
+  // Generate ray directions via a seed-jittered Fibonacci sphere (a star pattern unique to each wallet)
+  const rng = sigilRng(sigilHash(organism.seed + 607));
   const phi = Math.PI * (3 - Math.sqrt(5));
   const rays = [];
   for (let i = 0; i < rayCount; i++) {
@@ -1273,7 +1273,7 @@ function drawRepRays(ctx) {
     const depth = (pOut.depth + pIn.depth) * 0.5;
     const hue   = chromaHue(baseHue, ray.phase);
 
-    // Ray çizgisi — dışta silik, iç uca doğru parlaklık artar (sinyal güçleniyor)
+    // Ray line — faint on the outside, brighter toward the inner end (signal strengthening)
     const grad = ctx.createLinearGradient(pOut.x, pOut.y, pIn.x, pIn.y);
     grad.addColorStop(0,   `hsla(${hue}, 70%, 60%, 0)`);
     grad.addColorStop(0.5, `hsla(${hue}, 85%, 70%, ${0.18 * (0.3 + depth * 0.7) * focusMul})`);
@@ -1285,13 +1285,13 @@ function drawRepRays(ctx) {
     ctx.lineTo(pIn.x, pIn.y);
     ctx.stroke();
 
-    // İçeri kayan sinyal noktası (0 = outer, 1 = REP halkasına varış)
+    // Inward-traveling signal dot (0 = outer, 1 = arrival at the REP ring)
     const travelT = ((T + ray.phase * travelSec / (Math.PI * 2)) % travelSec) / travelSec;
     const sx = ox + (ix - ox) * travelT;
     const sy = oy + (iy - oy) * travelT;
     const sz = oz + (iz - oz) * travelT;
     const pp = project3D(sx, sy, sz);
-    const r  = (0.8 + travelT * 1.6) * FF.soulScale;
+    const r  = (0.8 + travelT * 1.6) * FF.sigilScale;
     const a  = (0.55 + travelT * 0.35) * (0.45 + pp.depth * 0.55) * focusMul;
 
     const glow = ctx.createRadialGradient(pp.x, pp.y, 0, pp.x, pp.y, r * 3);
@@ -1307,27 +1307,27 @@ function drawRepRays(ctx) {
   ctx.restore();
 }
 
-// ── FULL SET — dikenli dış çember, teal (yoksa görünmez) ──
-// Kalın dikenler + aralarda noktalar. 60s'de yavaş dönüş, 2s'de bir nabız (blink).
+// ── FULL SET — thorny outer shell, teal (invisible if not owned) ──
+// Thick spikes + dots between them. Slow 60s rotation, pulse (blink) every 2s.
 function drawFullSetThornyShell(ctx) {
-  if (!soul.fullSet) return;
-  const radius     = FF.soulR * 0.95;
+  if (!sigil.fullSet) return;
+  const radius     = FF.sigilR * 0.95;
   const spikeCount = 24;
-  const spikeLen   = 32 * FF.soulScale;                          // bir tık daha kalın
+  const spikeLen   = 32 * FF.sigilScale;                          // a touch thicker
   const segs       = perfMode ? 64 : 128;
-  const slowRot    = (T / 60) * Math.PI * 2;                     // 60s tam tur
+  const slowRot    = (T / 60) * Math.PI * 2;                     // full turn in 60s
   const baseHue    = 155;
   const focused    = (_hoveredLayerKey === 'fullSet' || _pinnedLayerKey === 'fullSet');
   const focusMul   = focused ? 1.4 : 1.0;
 
-  // 2s periyotlu nabız — sin(πT) 2s'de tam cycle
+  // 2s pulse — sin(πT) completes a full cycle every 2s
   const blinkRaw = 0.5 + 0.5 * Math.sin(T * Math.PI);
   const blink    = (0.30 + 0.70 * blinkRaw) * focusMul;
 
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
 
-  // Base ring — kalın teal çember
+  // Base ring — thick teal circle
   for (let i = 0; i < segs; i++) {
     const a1 = (i / segs) * Math.PI * 2;
     const a2 = ((i + 1) / segs) * Math.PI * 2;
@@ -1345,7 +1345,7 @@ function drawFullSetThornyShell(ctx) {
     ctx.stroke();
   }
 
-  // Dikenler + aralardaki noktalar
+  // Spikes + dots between them
   for (let i = 0; i < spikeCount; i++) {
     const a = (i / spikeCount) * Math.PI * 2 + slowRot;
 
@@ -1360,18 +1360,18 @@ function drawFullSetThornyShell(ctx) {
     grad.addColorStop(0, `hsla(${hue}, 92%, 78%, ${(0.60 + depth * 0.40) * blink})`);
     grad.addColorStop(1, 'transparent');
     ctx.strokeStyle = grad;
-    ctx.lineWidth   = 2.8 + depth * 1.4;                         // bir tık daha kalın
+    ctx.lineWidth   = 2.8 + depth * 1.4;                         // a touch thicker
     ctx.lineCap     = 'round';
     ctx.beginPath();
     ctx.moveTo(pIn.x, pIn.y);
     ctx.lineTo(pOut.x, pOut.y);
     ctx.stroke();
 
-    // Diken arasındaki nokta
+    // Dot between the spikes
     const aMid = a + Math.PI / spikeCount;
     const dot3 = ringPt(aMid, radius, 0, 0);
     const pDot = project3D(dot3.x, dot3.y, dot3.z);
-    const dr   = (2.6 + 0.8 * pDot.depth) * FF.soulScale;        // bir tık daha kalın
+    const dr   = (2.6 + 0.8 * pDot.depth) * FF.sigilScale;        // a touch thicker
     const dHue = chromaHue(baseHue, i * 0.2);
     ctx.beginPath();
     ctx.arc(pDot.x, pDot.y, dr, 0, Math.PI * 2);
@@ -1382,13 +1382,13 @@ function drawFullSetThornyShell(ctx) {
   ctx.restore();
 }
 
-// ── NAKAMOTO — altın bilezik (iki altın çerçeve + ritimli altın noktalar + hızlı top) ──
-// Cüzdan seed'iyle unique eğim/azimut. Sistemle birlikte döner.
+// ── NAKAMOTO — gold bracelet (two gold frames + rhythmic gold dots + fast orb) ──
+// Unique tilt/azimuth from the wallet seed. Rotates with the system.
 function drawNakamotoBracelet(ctx) {
-  if (!soul.nakamoto) return;
+  if (!sigil.nakamoto) return;
   const segs      = perfMode ? 128 : 192;
-  const radius    = FF.soulR * 0.88;
-  const braceletW = 9 * FF.soulScale;
+  const radius    = FF.sigilR * 0.88;
+  const braceletW = 9 * FF.sigilScale;
   const dotCount  = 36;
   const sizeCycle = [1.2, 2.4, 1.2, 3.4, 1.2, 2.4];
   const focused   = (_hoveredLayerKey === 'nakamoto' || _pinnedLayerKey === 'nakamoto');
@@ -1400,7 +1400,7 @@ function drawNakamotoBracelet(ctx) {
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
 
-  // Baz + iki çerçeve çizgisinin noktalarını ön hesapla
+  // Pre-compute the points for the base + two frame lines
   const basePts  = [];
   const innerPts = [];
   const outerPts = [];
@@ -1414,7 +1414,7 @@ function drawNakamotoBracelet(ctx) {
     outerPts.push(project3D(base.x + rx * braceletW, base.y, base.z + rz * braceletW));
   }
 
-  // İki altın çerçeve çizgisi (her ikisi de saf altın)
+  // Two gold frame lines (both pure gold)
   for (let side = 0; side < 2; side++) {
     const pts = side === 0 ? innerPts : outerPts;
     for (let i = 0; i < segs; i++) {
@@ -1429,11 +1429,11 @@ function drawNakamotoBracelet(ctx) {
     }
   }
 
-  // Altın noktalar — merkez çizgide, ritimli boyut örüntüsü
+  // Gold dots — on the center line, with a rhythmic size pattern
   for (let i = 0; i < dotCount; i++) {
     const segIdx = Math.floor((i / dotCount) * segs);
     const p      = basePts[segIdx];
-    const sz     = sizeCycle[i % sizeCycle.length] * FF.soulScale;
+    const sz     = sizeCycle[i % sizeCycle.length] * FF.sigilScale;
     const r      = sz * (0.55 + p.depth * 0.65);
     const alpha  = (0.55 + p.depth * 0.40) * focusMul;
 
@@ -1452,14 +1452,14 @@ function drawNakamotoBracelet(ctx) {
     ctx.fill();
   }
 
-  // ── Hızlı dönen altın top — bilezik boyunca 3s'de tam tur ──
+  // ── Fast-spinning gold orb — one full lap of the bracelet every 3s ──
   const ballT     = (T / 3) % 1;
   const ballIdx   = Math.floor(ballT * segs);
   const bp        = basePts[ballIdx];
-  const br        = 6 * FF.soulScale + bp.depth * 2.2;
+  const br        = 6 * FF.sigilScale + bp.depth * 2.2;
   const ballAlpha = (0.85 + bp.depth * 0.15) * focusMul;
 
-  // Dış glow
+  // Outer glow
   const glow = ctx.createRadialGradient(bp.x, bp.y, 0, bp.x, bp.y, br * 6);
   glow.addColorStop(0,    `hsla(54, 100%, 96%, ${ballAlpha})`);
   glow.addColorStop(0.22, `hsla(48, 100%, 74%, ${ballAlpha * 0.55})`);
@@ -1470,7 +1470,7 @@ function drawNakamotoBracelet(ctx) {
   ctx.arc(bp.x, bp.y, br * 6, 0, Math.PI * 2);
   ctx.fill();
 
-  // Sıcak beyaz çekirdek
+  // Warm-white core
   ctx.beginPath();
   ctx.arc(bp.x, bp.y, br * 0.55, 0, Math.PI * 2);
   ctx.fillStyle = `hsla(56, 100%, 98%, ${Math.min(1, ballAlpha + 0.05)})`;
@@ -1479,24 +1479,24 @@ function drawNakamotoBracelet(ctx) {
   ctx.restore();
 }
 
-// (Eski emanation kaldırıldı — Meme Artist artık 7. orbital ring, rainbow)
+// (Old emanation removed — Meme Artist is now the 7th orbital ring, rainbow)
 
-// ── TDH Solar Core — kompakt ışın patlaması (kristal burst) ───────
-// Referans: küçük yoğun çekirdek + 4/6 kollu crystal flare rays
+// ── TDH Solar Core — compact ray burst (crystal burst) ────────────
+// Reference: a small dense core + 4/6-arm crystal flare rays
 function drawSolarCore(ctx, cx, cy) {
-  const tdhN   = normalizeTDH(soul.tdh);
+  const tdhN   = normalizeTDH(sigil.tdh);
   const breath = 1 + Math.sin(T * LOOP_BREATH) * 0.08 + Math.sin(T * LOOP_BREATH * 2.3) * 0.03;
-  const r      = lerp(10, 22, tdhN) * breath * FF.soulScale;  // kompakt
-  const hue    = soul.baseHue;
+  const r      = lerp(10, 22, tdhN) * breath * FF.sigilScale;  // compact
+  const hue    = sigil.baseHue;
 
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
 
-  // Flare ışınları — 6 kollu crystal burst, TDH + BOOST ile uzar
+  // Flare rays — 6-arm crystal burst, extended by TDH + BOOST
   const rayN    = 6;
   const boostN  = FF.layerStrength ? (FF.layerStrength[1] || 0) : 0;
   const rayLen  = r * (4.5 + tdhN * 3.0 + boostN * 2.5);
-  const rayRng  = soulRng(soulHash(organism.seed + 313));
+  const rayRng  = sigilRng(sigilHash(organism.seed + 313));
   for (let i = 0; i < rayN; i++) {
     const phase  = rayRng() * Math.PI * 2;
     const baseA  = (i / rayN) * Math.PI * 2 + rayRng() * 0.2;
@@ -1518,7 +1518,7 @@ function drawSolarCore(ctx, cx, cy) {
     ctx.stroke();
   }
 
-  // Kompakt iç glow
+  // Compact inner glow
   const inner = ctx.createRadialGradient(cx, cy, 0, cx, cy, r * 2.6);
   inner.addColorStop(0,    `hsla(${hue}, 90%, 96%, ${0.85})`);
   inner.addColorStop(0.25, `hsla(${hue}, 95%, 80%, ${0.55})`);
@@ -1529,7 +1529,7 @@ function drawSolarCore(ctx, cx, cy) {
   ctx.arc(cx, cy, r * 2.6, 0, Math.PI * 2);
   ctx.fill();
 
-  // Çekirdek — beyaz-sıcak kristal nokta
+  // Core — warm-white crystal dot
   ctx.beginPath();
   ctx.arc(cx, cy, r * 0.55, 0, Math.PI * 2);
   ctx.fillStyle = `hsla(0, 0%, 100%, ${0.95})`;
@@ -1538,15 +1538,15 @@ function drawSolarCore(ctx, cx, cy) {
   ctx.restore();
 }
 
-// ── Overlay — temiz kozmik: bloom + vignette ──
+// ── Overlay — clean cosmic: bloom + vignette ──
 function drawOverlay() {
   const W = FF.logicalW || window.innerWidth;
   const H = FF.logicalH || window.innerHeight;
   ctx3.clearRect(0, 0, W, H);
 
-  // Bloom — kozmik parıltı, TDH'yle artar. Logical dims ile çiz (DPR korunur).
+  // Bloom — cosmic shimmer, grows with TDH. Draw with logical dims (preserves DPR).
   if (!perfMode) {
-    const tdhN = normalizeTDH(soul.tdh);
+    const tdhN = normalizeTDH(sigil.tdh);
     ctx3.save();
     ctx3.globalCompositeOperation = 'screen';
     ctx3.globalAlpha = 0.22 + tdhN * 0.18;
@@ -1556,12 +1556,12 @@ function drawOverlay() {
     ctx3.filter = 'none';
   }
 
-  // Vignette — ruh boşlukta yüzsün. Tier 7+ (MONUMENT+) için kenar daha yumuşak.
-  // FF.soulR kullanıyoruz ki vignette mobilde de soul etrafını sıkıca çevrelesin.
+  // Vignette — let the sigil float in the void. For Tier 7+ (MONUMENT+), the edge is softer.
+  // We use FF.sigilR so the vignette hugs the sigil on mobile too.
   const softEdge = (FF.tier || 1) >= 7;
   const vEdgeAlpha = softEdge ? 0.82 : 0.95;
   const vMidAlpha  = softEdge ? 0.42 : 0.55;
-  const vr = FF.soulR;
+  const vr = FF.sigilR;
   const v = ctx3.createRadialGradient(
     FF.cx, FF.cy, vr * 0.60,
     FF.cx, FF.cy, vr * 1.35
@@ -1575,10 +1575,10 @@ function drawOverlay() {
 }
 
 // ══════════════════════════════════════════════════════════
-//  RING HOVER / PIN — cursor halkaların üstüne geldiğinde bilgi
+//  RING HOVER / PIN — info shown when the cursor is over a ring
 // ══════════════════════════════════════════════════════════
-// Her katman için kısa bilgi: etiket + değer fonksiyonu + yüzeysel açıklama
-// Param bilgileri — hem orbital hem rare formlar (hover card için)
+// Short info per layer: label + value function + short description
+// Param info — for both orbital and rare forms (used by the hover card)
 const PARAM_INFO = {
   tdh:      { name: 'TDH',         desc: 'total days held',     hue:  42, value: s => (s.tdh    || 0).toLocaleString() },
   boost:    { name: 'BOOST',       desc: 'TDH multiplier',      hue: 308, value: s => `×${(s.boost || 1).toFixed(2)}`  },
@@ -1597,7 +1597,7 @@ let _mouseX = -1, _mouseY = -1;
 let _hoveredLayerKey = null;
 let _pinnedLayerKey  = null;
 
-// ── Zoom (view zoom, ayrı canvas transform) ──
+// ── Zoom (view zoom, separate canvas transform) ──
 const ZOOM_MIN = 0.5;
 const ZOOM_MAX = 2.0;
 let viewZoom = 1.0;
@@ -1617,33 +1617,33 @@ function setViewZoom(z) {
 }
 function resetViewZoom() { setViewZoom(1.0); }
 
-// Hover'lanabilir tüm "ring"ler: orbital LAYERS + rare formlar (sahipse)
+// All hoverable "rings": orbital LAYERS + rare forms (when owned)
 function getHoverableRings() {
   const rings = [];
   for (const layer of LAYERS) {
-    if (layer.onlyIf && !soul[layer.onlyIf]) continue;
-    rings.push({ key: layer.key, radius: layer.rf * FF.soulR, incl: layer.incl, az: layer.az });
+    if (layer.onlyIf && !sigil[layer.onlyIf]) continue;
+    rings.push({ key: layer.key, radius: layer.rf * FF.sigilR, incl: layer.incl, az: layer.az });
   }
-  if (soul.fullSet) {
-    rings.push({ key: 'fullSet', radius: FF.soulR * 0.95, incl: 0, az: 0 });
+  if (sigil.fullSet) {
+    rings.push({ key: 'fullSet', radius: FF.sigilR * 0.95, incl: 0, az: 0 });
   }
-  if (soul.nakamoto) {
+  if (sigil.nakamoto) {
     const ni = (((organism.seed >>> 0) % 1000) / 1000 - 0.5) * Math.PI * 0.75;
     const na = (((organism.seed >>> 0) % 10000) / 10000) * Math.PI * 2;
-    rings.push({ key: 'nakamoto', radius: FF.soulR * 0.88, incl: ni, az: na });
+    rings.push({ key: 'nakamoto', radius: FF.sigilR * 0.88, incl: ni, az: na });
   }
   return rings;
 }
 
-// Hit-test — cursor hangi ring'in üstünde? { key } döndürür, yoksa null
-// viewZoom aktifse client koordinatları canvas iç koordinatlarına geri maplanır.
+// Hit-test — which ring is the cursor over? Returns { key }, or null.
+// If viewZoom is active, client coordinates are remapped back to canvas coordinates.
 function hitTestLayers(mx, my) {
-  if (!FF || !soul) return null;
-  // Zoom compensation: CSS scale(k) ortasından ise, client(x,y) ↔ canvas(cx+(x-cx)/k, cy+(y-cy)/k)
+  if (!FF || !sigil) return null;
+  // Zoom compensation: if CSS scale(k) is centered, client(x,y) ↔ canvas(cx+(x-cx)/k, cy+(y-cy)/k)
   const zmx = FF.cx + (mx - FF.cx) / viewZoom;
   const zmy = FF.cy + (my - FF.cy) / viewZoom;
   const segs = 96;
-  const threshold = 22 / viewZoom;   // zoom out'ta hit alanı da küçülmesin
+  const threshold = 22 / viewZoom;   // don't let the hit area shrink when zoomed out
   const rings = getHoverableRings();
   let bestKey = null, bestDist = threshold;
   for (const r of rings) {
@@ -1662,7 +1662,7 @@ function hitTestLayers(mx, my) {
 function updateHoverCardContent(key) {
   const card = document.getElementById('hoverCard');
   if (!card) return;
-  if (!key || !soul) {
+  if (!key || !sigil) {
     card.classList.remove('visible', 'pinned');
     return;
   }
@@ -1675,7 +1675,7 @@ function updateHoverCardContent(key) {
   lbl.style.color = info.rainbow
     ? `hsl(${(T * 60) % 360}, 85%, 74%)`
     : `hsl(${info.hue}, 85%, 72%)`;
-  val.textContent = info.value(soul);
+  val.textContent = info.value(sigil);
   dsc.textContent = info.desc;
   card.classList.add('visible');
   card.classList.toggle('pinned', key === _pinnedLayerKey);
@@ -1684,7 +1684,7 @@ function updateHoverCardContent(key) {
 function positionHoverCard(x, y) {
   const card = document.getElementById('hoverCard');
   if (!card) return;
-  // Cursor'un sağ-üstüne offset (+18, -12). Ekrandan taşmasın → sola yaslan
+  // Offset to the top-right of the cursor (+18, -12). If it overflows the screen, flip to the left.
   const rect = card.getBoundingClientRect();
   const w = rect.width || 160;
   const h = rect.height || 70;
@@ -1701,10 +1701,10 @@ function updateCursorForHit(onRing) {
   wrap.style.cursor = onRing ? 'pointer' : '';
 }
 
-// animate() her frame'de hit-test yapar (halkalar dönüyor, stasis'de bile değişebilir)
+// animate() hit-tests every frame (the rings rotate, so it can change even while the cursor is still)
 function updateHoverFromFrame() {
   if (_mouseX < 0) return;
-  if (_pinnedLayerKey) return;  // pin aktif → değişmesin
+  if (_pinnedLayerKey) return;  // pin is active → don't change
   const hit    = hitTestLayers(_mouseX, _mouseY);
   const newKey = hit ? hit.key : null;
   if (newKey !== _hoveredLayerKey) {
@@ -1723,7 +1723,7 @@ function clearHoverState() {
   updateCursorForHit(false);
 }
 
-// Canvas üzerinde etkileşim
+// Interaction on the canvas
 (function initHoverInteraction() {
   const wrap = document.getElementById('canvasWrap');
   if (!wrap) return;
@@ -1741,7 +1741,7 @@ function clearHoverState() {
       updateHoverCardContent(_hoveredLayerKey);
       return;
     }
-    // Aynı halkaya tıkla → unpin; farklı → yeni pin
+    // Click the same ring → unpin; a different one → new pin
     _pinnedLayerKey  = (_pinnedLayerKey === hit.key) ? null : hit.key;
     _hoveredLayerKey = hit.key;
     updateHoverCardContent(hit.key);
@@ -1758,14 +1758,14 @@ function clearHoverState() {
   });
 })();
 
-// ── Zoom: mouse wheel (PC) + slider drag (mobil/pc) ──
+// ── Zoom: mouse wheel (PC) + slider drag (mobile/PC) ──
 (function initZoom() {
-  // Wheel zoom — canvas üstünde scroll → zoom
+  // Wheel zoom — scroll over the canvas → zoom
   window.addEventListener('wheel', (e) => {
-    if (!soul) return;
+    if (!sigil) return;
     const t = e.target;
     if (t && t.closest && (t.closest('#exportBar') || t.closest('#topCtrls') || t.closest('#zoomSlider'))) {
-      return;  // UI öğelerinin üstündeyken zoom tetiklenmesin
+      return;  // don't trigger zoom while over UI elements
     }
     e.preventDefault();
     setViewZoom(viewZoom + (-e.deltaY * 0.0008));
@@ -1802,7 +1802,7 @@ function clearHoverState() {
   thumb.addEventListener('pointercancel', endDrag);
   thumb.addEventListener('lostpointercapture', endDrag);
 
-  // Track'e tıkla → o pozisyona atla
+  // Click the track → jump to that position
   track.addEventListener('pointerdown', (e) => {
     if (e.target !== track) return;
     setFromY(e.clientY);
@@ -1814,7 +1814,7 @@ function clearHoverState() {
 })();
 
 // ══════════════════════════════════════════════════════════
-//  6529 API — direkt client fetch (CORS açık) + build-time artist index
+//  6529 API — direct client fetch (CORS open) + build-time artist index
 // ══════════════════════════════════════════════════════════
 const API_BASE = 'https://api.6529.io';
 let _artistIndex = null;
@@ -1828,14 +1828,14 @@ async function loadArtistIndex() {
     console.warn('[artist-index] load failed:', err.message);
     _artistIndex = { handles: {}, wallets: {} };
   }
-  // Cache max card count across all artists — drives bead cap dinamik olarak
-  // (6529er bugünün zirvesi; biri kırarsa artist-index rebuild ile otomatik güncellenir)
+  // Cache max card count across all artists — drives the bead cap dynamically
+  // (6529er tops the list today; if anyone passes it, rebuild the artist-index and it auto-updates)
   const counts = Object.values(_artistIndex.handles || {});
   _artistIndex._maxCount = counts.length ? Math.max(...counts) : 25;
   return _artistIndex;
 }
 
-async function fetchSoulFromApi(addr) {
+async function fetchSigilFromApi(addr) {
   const [tdhResp, profileResp] = await Promise.all([
     fetch(`${API_BASE}/api/tdh/consolidation/${encodeURIComponent(addr)}`),
     fetch(`${API_BASE}/api/profiles/${encodeURIComponent(addr)}`),
@@ -1899,11 +1899,11 @@ async function fetchSoulFromApi(addr) {
 }
 
 // ══════════════════════════════════════════════════════════
-//  MINI SOUL — küçük, statik, kin kartları için
+//  MINI SIGIL — small, static, for kin cards
 // ══════════════════════════════════════════════════════════
-// Tek kare, animasyonsuz. Sadece: aura + core + 3 ring + rare formlar (varsa).
-// Her kin kartında 120-130px'lik bir canvas'a çizilir.
-function drawMiniSoul(canvas, soulLike, baseHue) {
+// Single frame, no animation. Only: aura + core + 3 rings + rare forms (when owned).
+// Drawn into a 120-130px canvas on each kin card.
+function drawMiniSigil(canvas, sigilLike, baseHue) {
   const ctx = canvas.getContext('2d');
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   const sizeCss = canvas.clientWidth || 120;
@@ -1916,14 +1916,14 @@ function drawMiniSoul(canvas, soulLike, baseHue) {
   const R  = Math.min(W, H) * 0.42;
 
   const hue = (typeof baseHue === 'number') ? baseHue : 200;
-  const tdhN = normalizeTDH(soulLike.tdh || 0);
-  const boostN = clamp((soulLike.boost || 1 - 1.0) / 1.3, 0, 1);
-  const uniN   = clamp((soulLike.unique || 0) / 484, 0, 1);
-  const repN   = normalizeRep(soulLike.rep || 0);
-  const nicN   = normalizeNic(soulLike.nic || 0);
-  const levelN = clamp((soulLike.level || 0) / 100, 0, 1);
+  const tdhN = normalizeTDH(sigilLike.tdh || 0);
+  const boostN = clamp((sigilLike.boost || 1 - 1.0) / 1.3, 0, 1);
+  const uniN   = clamp((sigilLike.unique || 0) / 484, 0, 1);
+  const repN   = normalizeRep(sigilLike.rep || 0);
+  const nicN   = normalizeNic(sigilLike.nic || 0);
+  const levelN = clamp((sigilLike.level || 0) / 100, 0, 1);
 
-  // Arka plan
+  // Background
   ctx.fillStyle = '#000';
   ctx.fillRect(0, 0, W, H);
 
@@ -1954,16 +1954,16 @@ function drawMiniSoul(canvas, soulLike, baseHue) {
     ctx.stroke();
   }
 
-  // Nakamoto — altın bilezik halkası
-  if (soulLike.nakamoto) {
+  // Nakamoto — gold bracelet ring
+  if (sigilLike.nakamoto) {
     ctx.beginPath();
     ctx.arc(cx, cy, R * 0.88, 0, Math.PI * 2);
     ctx.strokeStyle = `hsla(48, 100%, 72%, 0.80)`;
     ctx.lineWidth = 2.0;
     ctx.stroke();
   }
-  // Full Set — dikenli dış çember (sade: sadece halka)
-  if (soulLike.fullSet) {
+  // Full Set — thorny outer shell (simplified: just a ring)
+  if (sigilLike.fullSet) {
     ctx.beginPath();
     ctx.arc(cx, cy, R * 0.96, 0, Math.PI * 2);
     ctx.strokeStyle = `hsla(155, 85%, 68%, 0.70)`;
@@ -1971,7 +1971,7 @@ function drawMiniSoul(canvas, soulLike, baseHue) {
     ctx.stroke();
   }
   // Meme Artist — rainbow ring (conic)
-  if (soulLike.memeArtist) {
+  if (sigilLike.memeArtist) {
     const rad = R * 0.86;
     const segs = 36;
     for (let i = 0; i < segs; i++) {
@@ -1986,7 +1986,7 @@ function drawMiniSoul(canvas, soulLike, baseHue) {
     }
   }
 
-  // Solar core — kompakt parlak merkez
+  // Solar core — compact bright center
   const coreR = lerp(4, 9, tdhN);
   const inner = ctx.createRadialGradient(cx, cy, 0, cx, cy, coreR * 3);
   inner.addColorStop(0,   `hsla(${hue}, 95%, 94%, 0.95)`);
@@ -2006,28 +2006,28 @@ function drawMiniSoul(canvas, soulLike, baseHue) {
 }
 
 // ══════════════════════════════════════════════════════════
-//  KIN — aynı Soul Name modifier/archetype'ı paylaşan artist'ler
+//  KIN — artists who share the same Sigil Name modifier/archetype
 // ══════════════════════════════════════════════════════════
-// Öncelik hiyerarşisi:
-//   1) TWIN         — aynı tam Soul Name
-//   2) SAME MODIFIER — aynı modifier, farklı archetype
-//   3) SAME ARCHETYPE — aynı archetype, farklı modifier
-//   4) SAME TIER     — hiçbiri tutmadıysa aynı tier
-// Her bucket içinde TDH yakınlığına göre sıralanır (daha yakın ruhlar önce).
-// User'ın kendisi (eğer artist ise) hariç tutulur.
-function findKin(userSoul, userHandle) {
+// Priority hierarchy:
+//   1) TWIN          — same full Sigil Name
+//   2) SAME MODIFIER — same modifier, different archetype
+//   3) SAME ARCHETYPE — same archetype, different modifier
+//   4) SAME TIER     — same tier if none of the above matched
+// Within each bucket, sorted by TDH proximity (closer sigils first).
+// The user themselves (if they are an artist) is excluded.
+function findKin(userSigil, userHandle) {
   if (!_artistIndex || !_artistIndex.profiles) return [];
   const profiles = _artistIndex.profiles;
 
-  // User Soul Name'i hesapla
-  const userSoulName = generateSoulName(userSoul);
-  const [userMod, ...restArr] = userSoulName.split(' ');
+  // Compute the user's Sigil Name
+  const userSigilName = generateSigilName(userSigil);
+  const [userMod, ...restArr] = userSigilName.split(' ');
   const userArch = restArr.join(' ');
-  const userTier = (typeof getSoulClass === 'function') ? (getSoulClass(userSoul.tdh).tier || 1) : 1;
-  const userTdh  = userSoul.tdh || 0;
+  const userTier = (typeof getSigilClass === 'function') ? (getSigilClass(userSigil.tdh).tier || 1) : 1;
+  const userTdh  = userSigil.tdh || 0;
   const exclude  = (userHandle || '').toLowerCase();
 
-  // Adayları TDH yakınlığına göre sırala
+  // Sort candidates by TDH proximity
   const entries = Object.entries(profiles)
     .filter(([h]) => h !== exclude)
     .map(([h, p]) => ({
@@ -2036,7 +2036,7 @@ function findKin(userSoul, userHandle) {
       tdhDist: Math.abs((p.stats?.tdh || 0) - userTdh),
     }));
 
-  const twins   = entries.filter(e => e.profile.soulName === userSoulName);
+  const twins   = entries.filter(e => e.profile.sigilName === userSigilName);
   const modKin  = entries.filter(e => e.profile.modifier === userMod  && e.profile.archetype !== userArch);
   const archKin = entries.filter(e => e.profile.archetype === userArch && e.profile.modifier !== userMod);
   const tierKin = entries.filter(e => e.profile.tier === userTier && e.profile.modifier !== userMod && e.profile.archetype !== userArch);
@@ -2045,7 +2045,7 @@ function findKin(userSoul, userHandle) {
     bucket.sort((a, b) => a.tdhDist - b.tdhDist);
   }
 
-  // Çeşitlilik odaklı seçim: öncelikle her kategoriden birer kişi almaya çalış
+  // Diversity-focused pick: try to take one person from each category first
   const kin = [];
   const used = new Set();
   const takeFrom = (bucket, reason) => {
@@ -2060,7 +2060,7 @@ function findKin(userSoul, userHandle) {
   takeFrom(twins,   'TWIN');
   takeFrom(modKin,  'SAME MODIFIER');
   takeFrom(archKin, 'SAME ARCHETYPE');
-  // Kalan slot varsa priority sırasına göre doldur
+  // Fill any remaining slots in priority order
   while (kin.length < 3) {
     let added = false;
     for (const [bucket, reason] of [[twins,'TWIN'],[modKin,'SAME MODIFIER'],[archKin,'SAME ARCHETYPE'],[tierKin,'SAME TIER']]) {
@@ -2079,13 +2079,13 @@ function findKin(userSoul, userHandle) {
 }
 
 // ══════════════════════════════════════════════════════════
-//  LIVE DATA — 10 dk'da bir otomatik refresh + manuel retrigger
+//  LIVE DATA — auto-refresh every 10 min + manual retrigger
 // ══════════════════════════════════════════════════════════
 let _currentAddr      = null;
 let _lastFetchedAt    = null;
 let _refreshInterval  = null;
 let _timestampInterval = null;
-const REFRESH_MS = 10 * 60 * 1000;  // 10 dakika
+const REFRESH_MS = 10 * 60 * 1000;  // 10 minutes
 
 function updateLiveTimestamp() {
   const el = document.getElementById('liveText');
@@ -2097,31 +2097,31 @@ function updateLiveTimestamp() {
   else           el.textContent = `LIVE · ${Math.floor(mins/60)}h ago`;
 }
 
-async function refreshSoulData() {
-  if (!soul || !_currentAddr) return;
+async function refreshSigilData() {
+  if (!sigil || !_currentAddr) return;
   const indicator = document.getElementById('liveIndicator');
   if (indicator) {
     indicator.classList.remove('stale');
     indicator.classList.add('refreshing');
   }
   try {
-    const data = await fetchSoulFromApi(_currentAddr);
+    const data = await fetchSigilFromApi(_currentAddr);
     if (data.unborn) throw new Error('became unborn');
     if (data.error)  throw new Error(data.error);
 
-    // Soul alanlarını güncelle (enrichSoul her şeyi normalize eder)
-    const updated = enrichSoul({ ...data, address: soul.address });
-    Object.assign(soul, updated);
+    // Update sigil fields (enrichSigil normalizes everything)
+    const updated = enrichSigil({ ...data, address: sigil.address });
+    Object.assign(sigil, updated);
 
-    // Layer strength + tier güncelle — animasyon durmaz, sadece değerler değişir
+    // Update layer strength + tier — animation doesn't pause, only values change
     if (FF && FF.layerStrength) {
-      const tdhN    = normalizeTDH(soul.tdh);
-      const boostN  = clamp((soul.boost - 1.0) / 1.3, 0, 1);
-      const levelN  = clamp(soul.level / 100, 0, 1);
-      const uniN    = clamp(soul.unique / 484, 0, 1);
-      const nicN    = normalizeNic(soul.nic);
-      const repN    = normalizeRep(soul.rep);
-      const artistN = soul.memeArtist ? 1 : 0;
+      const tdhN    = normalizeTDH(sigil.tdh);
+      const boostN  = clamp((sigil.boost - 1.0) / 1.3, 0, 1);
+      const levelN  = clamp(sigil.level / 100, 0, 1);
+      const uniN    = clamp(sigil.unique / 484, 0, 1);
+      const nicN    = normalizeNic(sigil.nic);
+      const repN    = normalizeRep(sigil.rep);
+      const artistN = sigil.memeArtist ? 1 : 0;
       FF.layerStrength[0] = tdhN;
       FF.layerStrength[1] = boostN;
       FF.layerStrength[2] = uniN;
@@ -2129,12 +2129,12 @@ async function refreshSoulData() {
       FF.layerStrength[4] = repN;
       FF.layerStrength[5] = levelN;
       if (FF.layerStrength.length > 6) FF.layerStrength[6] = artistN;
-      if (typeof getSoulClass === 'function') {
-        FF.tier = getSoulClass(soul.tdh).tier || 1;
+      if (typeof getSigilClass === 'function') {
+        FF.tier = getSigilClass(sigil.tdh).tier || 1;
       }
     }
 
-    // HUD metinlerini yenile
+    // Refresh HUD text
     if (typeof buildHUD === 'function') buildHUD();
 
     _lastFetchedAt = Date.now();
@@ -2152,7 +2152,7 @@ async function refreshSoulData() {
 function startAutoRefresh() {
   stopAutoRefresh();
   if (!_currentAddr) return;
-  _refreshInterval   = setInterval(refreshSoulData, REFRESH_MS);
+  _refreshInterval   = setInterval(refreshSigilData, REFRESH_MS);
   _timestampInterval = setInterval(updateLiveTimestamp, 60 * 1000);
 }
 function stopAutoRefresh() {
@@ -2162,34 +2162,34 @@ function stopAutoRefresh() {
 }
 
 // ══════════════════════════════════════════════════════════
-//  KIN OVERLAY — buton açar, 3 kin kartını doldurur, tıkla → ziyaret et
+//  KIN OVERLAY — button opens it, fills 3 kin cards, click → visit
 // ══════════════════════════════════════════════════════════
 let _lastKin = [];
 
 async function openKin() {
-  if (!soul) return;
+  if (!sigil) return;
   const overlay = document.getElementById('kinOverlay');
   if (!overlay) return;
 
-  // Veri henüz yüklenmediyse yükle
+  // Load the data if it hasn't been loaded yet
   await loadArtistIndex();
 
-  // Mevcut soul'un handle'ını çıkar (address içinden ENS veya artist-index'ten)
-  // soul.address API'den "consolidation_display" gelmişse karışık olabilir; profile
-  // handle'ını güvenilir şekilde bilmiyoruz. Self-exclusion için adresi normalize ederiz.
-  const userHandleCandidate = inferUserHandle(soul);
-  const kin = findKin(soul, userHandleCandidate);
+  // Infer the current sigil's handle (from the address via ENS or the artist-index)
+  // sigil.address may be messy if the API returned "consolidation_display"; we can't
+  // reliably get the profile handle, so we just normalize the address for self-exclusion.
+  const userHandleCandidate = inferUserHandle(sigil);
+  const kin = findKin(sigil, userHandleCandidate);
   _lastKin = kin;
 
-  // Merkez kart — kullanıcı
-  const userSoulName = generateSoulName(soul);
-  document.getElementById('kinCenterName').textContent = userSoulName || '—';
+  // Center card — the user
+  const userSigilName = generateSigilName(sigil);
+  document.getElementById('kinCenterName').textContent = userSigilName || '—';
   const countLabel = kin.length === 0
     ? 'no kin yet in the archive'
-    : `${kin.length} kindred soul${kin.length > 1 ? 's' : ''}`;
+    : `${kin.length} kindred sigil${kin.length > 1 ? 's' : ''}`;
   document.getElementById('kinCenterSub').textContent = countLabel;
 
-  // Kin kartlarını doldur
+  // Fill the kin cards
   const cards = overlay.querySelectorAll('.kin-card');
   cards.forEach((card, i) => {
     const k = kin[i];
@@ -2199,20 +2199,20 @@ async function openKin() {
     }
     card.classList.add('visible');
     card.querySelector('.kin-bond').textContent   = k.reason;
-    card.querySelector('.kin-name').textContent   = k.profile.soulName;
+    card.querySelector('.kin-name').textContent   = k.profile.sigilName;
     card.querySelector('.kin-handle').textContent = k.profile.handle;
     const addr = k.profile.primary_wallet || '';
     card.querySelector('.kin-addr').textContent = addr ? shortAddr(addr) : '';
 
-    // Mini soul render
+    // Mini sigil render
     const canvas = card.querySelector('.kin-mini');
-    const kinHue = soulHue(k.profile.primary_wallet || k.profile.handle);
-    drawMiniSoul(canvas, k.profile.stats || {}, kinHue);
+    const kinHue = sigilHue(k.profile.primary_wallet || k.profile.handle);
+    drawMiniSigil(canvas, k.profile.stats || {}, kinHue);
   });
 
-  // SVG çizgileri merkezden kartlara çiz
+  // Draw SVG lines from the center to each card
   overlay.classList.add('visible');
-  // Layout yerleştiğinden emin olmak için 1 frame bekle
+  // Wait 1 frame to make sure the layout has settled
   requestAnimationFrame(() => drawKinLines(overlay));
 }
 
@@ -2226,23 +2226,23 @@ async function visitKin(slotIdx) {
   if (!k) return;
   closeKin();
 
-  // Input'u güncelle ve readSoul çağır — yeni kullanıcı bu kin'i ziyaret ediyor
+  // Update the input and call readSigil — the user is visiting this kin
   const input = document.getElementById('walletInput');
   if (input) input.value = k.profile.handle;
 
-  // Main app'in readSoul'u input'tan değer alıyor, bu yüzden sadece çağırmamız yeterli
-  if (typeof readSoul === 'function') {
-    // renderSoul aktif olduğu için önce reset ya da direkt yeni render
-    // readSoul çağrısı entry ekranı gizliyken de çalışır, cüzdanı fetch eder
-    await readSoul();
+  // The main app's readSigil pulls from the input, so just calling it is enough
+  if (typeof readSigil === 'function') {
+    // renderSigil is already active, so reset first or just do a fresh render
+    // readSigil also works while the entry screen is hidden and fetches the wallet
+    await readSigil();
   }
 }
 
-// SVG çizgileri: merkez kart → her bir görünen kin kart merkezi
+// SVG lines: center card → each visible kin card's center
 function drawKinLines(overlay) {
   const svg = overlay.querySelector('.kin-lines');
   if (!svg) return;
-  // SVG boyutunu viewport'a ayarla
+  // Size the SVG to the viewport
   const rect = overlay.getBoundingClientRect();
   svg.setAttribute('viewBox', `0 0 ${rect.width} ${rect.height}`);
   svg.innerHTML = '';
@@ -2269,20 +2269,20 @@ function drawKinLines(overlay) {
   }
 }
 
-// Kullanıcının handle'ını çıkarmaya çalış (self-exclusion için)
-// soul.address bazen "foo.eth - bar.eth - baz.eth" formatında gelebilir;
-// bu yüzden ENS'i veya input'u saf handle olarak yakalamaya çalışırız.
+// Try to infer the user's handle (for self-exclusion).
+// sigil.address can sometimes come as "foo.eth - bar.eth - baz.eth";
+// so we try to grab the ENS or input as a clean handle.
 function inferUserHandle(s) {
   if (!s) return '';
-  // Önce currentAddr (input'a yazılan) — en güvenilir
+  // First try currentAddr (what was typed into the input) — most reliable
   if (_currentAddr) return String(_currentAddr).toLowerCase().trim();
-  // Fallback: adresten ilk kelimeyi al
+  // Fallback: take the first token from the address
   const addr = String(s.address || '').toLowerCase();
   const first = addr.split(/\s*[-,]\s*/)[0];
   return first.trim();
 }
 
-// Esc ile kapatma + dışına tıklayınca kapatma
+// Close on Esc + close on click outside
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     const ov = document.getElementById('kinOverlay');
@@ -2292,21 +2292,21 @@ document.addEventListener('keydown', (e) => {
 document.addEventListener('click', (e) => {
   const ov = document.getElementById('kinOverlay');
   if (!ov || !ov.classList.contains('visible')) return;
-  // Overlay'ın kendisine (dış alanına) tıklandıysa kapat; içteki elemanlar hariç
+  // Close if the overlay itself (the outer area) was clicked; skip inner elements
   if (e.target === ov) closeKin();
 });
 
 // ══════════════════════════════════════════════════════════
-//  SHARE TO X — mevcut ruhun paylaşılır linkiyle Twitter intent
+//  SHARE TO X — Twitter intent using the current sigil's shareable link
 // ══════════════════════════════════════════════════════════
-function shareSoulToX() {
-  if (!soul) return;
-  // Mevcut URL'i kullan — _pushSoulUrl zaten ?addr=... yazmış olmalı
+function shareSigilToX() {
+  if (!sigil) return;
+  // Use the current URL — _pushSigilUrl should have already written ?addr=...
   const url = window.location.href;
-  const cls = (typeof getSoulClass === 'function' && soul.tdh != null)
-              ? getSoulClass(soul.tdh).name
+  const cls = (typeof getSigilClass === 'function' && sigil.tdh != null)
+              ? getSigilClass(sigil.tdh).name
               : '';
-  const text = cls ? `6529 soul [${cls}] →` : `6529 soul →`;
+  const text = cls ? `6529 sigil [${cls}] →` : `6529 sigil →`;
   const intent = 'https://twitter.com/intent/tweet'
     + '?text=' + encodeURIComponent(text)
     + '&url='  + encodeURIComponent(url);
@@ -2315,12 +2315,12 @@ function shareSoulToX() {
 
 // ══════════════════════════════════════════════════════════
 //  EXPORT — GIF (540×540 / 12fps / 12s) + MP4 (720×720 / 15fps / 15s)
-//  Her iki format da tam 1 tur rotY ile seamless loop.
-//  Sadece canvas yakalanır (HUD DOM overlay, dahil değil).
+//  Both formats seamlessly loop with exactly one rotY turn.
+//  Only the canvas is captured (HUD DOM overlay not included).
 // ══════════════════════════════════════════════════════════
 
-// Ortak — capture başlangıcı, state kaydı + animasyon duraklat
-function beginSoulCapture() {
+// Shared — capture start, save state + pause animation
+function beginSigilCapture() {
   if (animId) cancelAnimationFrame(animId);
   animId = null;
   return {
@@ -2331,8 +2331,8 @@ function beginSoulCapture() {
   };
 }
 
-// Ortak — state restore + animasyonu devam ettir
-function endSoulCapture(state) {
+// Shared — restore state + resume animation
+function endSigilCapture(state) {
   T         = state.T;
   FF.rotY   = state.rotY;
   FF.rotX   = state.rotX;
@@ -2341,10 +2341,10 @@ function endSoulCapture(state) {
   animate(performance.now());
 }
 
-// Ortak — tek bir frame'i offscreen'e yaz (seamless tFrac 0→1)
-function drawSoulCaptureFrame(tFrac, duration, savedRotY, offCtx, exportSize, sx, sy, cropSize) {
+// Shared — render a single frame offscreen (seamless tFrac 0→1)
+function drawSigilCaptureFrame(tFrac, duration, savedRotY, offCtx, exportSize, sx, sy, cropSize) {
   T       = tFrac * duration;
-  FF.rotY = savedRotY + tFrac * Math.PI * 2;   // tam 1 tur → seamless loop
+  FF.rotY = savedRotY + tFrac * Math.PI * 2;   // exactly 1 turn → seamless loop
   FF.rotX = FF.axisTilt + Math.sin(T * 0.17) * 0.08 + Math.sin(T * 0.09) * 0.04;
 
   updateParticles();
@@ -2359,25 +2359,25 @@ function drawSoulCaptureFrame(tFrac, duration, savedRotY, offCtx, exportSize, sx
   offCtx.drawImage(c3, sx, sy, cropSize, cropSize, 0, 0, exportSize, exportSize);
 }
 
-// Ortak — file download tetikle
-function downloadSoulBlob(blob, ext) {
+// Shared — trigger a file download
+function downloadSigilBlob(blob, ext) {
   const url  = URL.createObjectURL(blob);
-  const addr = (soul.address || 'soul').toString().replace(/[^a-z0-9]/gi, '_').slice(0, 20);
+  const addr = (sigil.address || 'sigil').toString().replace(/[^a-z0-9]/gi, '_').slice(0, 20);
   const a    = document.createElement('a');
   a.href     = url;
-  a.download = `soul-${addr}.${ext}`;
+  a.download = `sigil-${addr}.${ext}`;
   document.body.appendChild(a);
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 5000);
 }
 
-// ── Export bar toggle — EXPORT butonu alt bar'ı açıp kapatır ──
+// ── Export bar toggle — the EXPORT button opens/closes the bottom bar ──
 function toggleExportBar() {
   const bar = document.getElementById('exportBar');
   const btn = document.getElementById('exportBtn');
   if (!bar || !btn) return;
-  if (btn.classList.contains('busy')) return;         // export sürerken açma
+  if (btn.classList.contains('busy')) return;         // don't open while an export is running
   bar.classList.toggle('visible');
 }
 
@@ -2386,7 +2386,7 @@ function closeExportBar() {
   if (bar) bar.classList.remove('visible');
 }
 
-// Dışarı tıklanınca bar'ı kapat
+// Close the bar on outside click
 document.addEventListener('click', (e) => {
   const bar = document.getElementById('exportBar');
   const btn = document.getElementById('exportBtn');
@@ -2395,9 +2395,9 @@ document.addEventListener('click', (e) => {
   closeExportBar();
 });
 
-// ── PNG EXPORT — tek kare. c1 artık DPR-scaled physical piksellerle. ──
-async function exportSoulPng() {
-  if (!soul) return;
+// ── PNG EXPORT — single frame. c1 is now DPR-scaled with physical pixels. ──
+async function exportSigilPng() {
+  if (!sigil) return;
   closeExportBar();
   const btn = document.getElementById('exportBtn');
   if (btn && btn.classList.contains('busy')) return;
@@ -2405,7 +2405,7 @@ async function exportSoulPng() {
   const dpr  = window._dpr || 1;
   const Wlog = FF.logicalW || window.innerWidth;
   const Hlog = FF.logicalH || window.innerHeight;
-  // Kare kırpma bölgesi — logical min'e göre, ruh etrafına hafif margin
+  // Square crop region — sized to the logical min, with a small margin around the sigil
   const cropLogical = Math.min(Wlog, Hlog);
   const srcCropPhys = cropLogical * dpr;
   const EXPORT_SIZE = Math.min(Math.round(srcCropPhys), 1080);
@@ -2426,7 +2426,7 @@ async function exportSoulPng() {
 
   off.toBlob((blob) => {
     if (!blob) return;
-    downloadSoulBlob(blob, 'png');
+    downloadSigilBlob(blob, 'png');
     if (btn) {
       const orig = btn.textContent;
       btn.textContent = '✓ DOWNLOADED';
@@ -2435,10 +2435,10 @@ async function exportSoulPng() {
   }, 'image/png');
 }
 
-// ── GIF EXPORT — 540×540 / 12fps / 12s / quality 10 (~8-10MB, <15MB garanti) ─
-async function exportSoulGif() {
-  if (!soul) return;
-  if (typeof GIF === 'undefined') { console.error('gif.js yüklenmedi'); return; }
+// ── GIF EXPORT — 540×540 / 12fps / 12s / quality 10 (~8-10MB, <15MB guaranteed) ─
+async function exportSigilGif() {
+  if (!sigil) return;
+  if (typeof GIF === 'undefined') { console.error('gif.js not loaded'); return; }
   closeExportBar();
   const btn = document.getElementById('exportBtn');
   if (!btn || btn.classList.contains('busy')) return;
@@ -2447,9 +2447,9 @@ async function exportSoulGif() {
   const EXPORT_SIZE = 540;
   const FPS         = 12;
   const DURATION    = 12;
-  const FRAME_COUNT = FPS * DURATION;  // 144 frame
+  const FRAME_COUNT = FPS * DURATION;  // 144 frames
 
-  const state = beginSoulCapture();
+  const state = beginSigilCapture();
 
   const off    = document.createElement('canvas');
   off.width    = EXPORT_SIZE;
@@ -2476,43 +2476,43 @@ async function exportSoulGif() {
 
   try {
     for (let i = 0; i < FRAME_COUNT; i++) {
-      drawSoulCaptureFrame(i / FRAME_COUNT, DURATION, state.rotY, offCtx, EXPORT_SIZE, sx, sy, cropSize);
+      drawSigilCaptureFrame(i / FRAME_COUNT, DURATION, state.rotY, offCtx, EXPORT_SIZE, sx, sy, cropSize);
       gif.addFrame(offCtx, { delay: Math.round(1000 / FPS), copy: true });
       btn.textContent = `⬇ CAPTURING ${Math.round(((i + 1) / FRAME_COUNT) * 100)}%`;
       if (i % 3 === 0) await new Promise(r => setTimeout(r, 0));
     }
 
-    endSoulCapture(state);  // capture bitti, normal animasyonu geri al
+    endSigilCapture(state);  // capture done, resume normal animation
 
     btn.textContent = '⚙ ENCODING 0%';
     gif.on('progress',  p => { btn.textContent = `⚙ ENCODING ${Math.round(p * 100)}%`; });
     gif.on('finished',  blob => {
-      downloadSoulBlob(blob, 'gif');
+      downloadSigilBlob(blob, 'gif');
       btn.classList.remove('busy');
       btn.textContent = '⬇ EXPORT';
     });
     gif.render();
   } catch (err) {
     console.error('GIF export failed:', err);
-    endSoulCapture(state);
+    endSigilCapture(state);
     btn.classList.remove('busy');
     btn.textContent = '⬇ EXPORT';
   }
 }
 
-// ── MP4 EXPORT — sitedeki tam kalite (native pixel, 30fps, 8Mbps) ──
-// MediaRecorder API. MP4 desteği yoksa WebM'e düşer (Firefox genelde WebM).
-async function exportSoulMp4() {
-  if (!soul) return;
+// ── MP4 EXPORT — full quality from the site (native pixels, 30fps, 8Mbps) ──
+// MediaRecorder API. Falls back to WebM when MP4 isn't supported (Firefox is usually WebM).
+async function exportSigilMp4() {
+  if (!sigil) return;
   if (typeof MediaRecorder === 'undefined') {
-    alert('Video kaydı bu tarayıcıda desteklenmiyor.');
+    alert('Video recording is not supported in this browser.');
     return;
   }
   closeExportBar();
   const btn = document.getElementById('exportBtn');
   if (!btn || btn.classList.contains('busy')) return;
 
-  // MIME type detect: MP4 tercih, WebM fallback
+  // MIME type detection: prefer MP4, fall back to WebM
   const candidates = [
     { mime: 'video/mp4;codecs=avc1.42E01E',    ext: 'mp4'  },
     { mime: 'video/mp4',                        ext: 'mp4'  },
@@ -2522,13 +2522,13 @@ async function exportSoulMp4() {
   ];
   const picked = candidates.find(c => MediaRecorder.isTypeSupported(c.mime));
   if (!picked) {
-    alert('Tarayıcı hiçbir video formatını desteklemiyor.');
+    alert('The browser does not support any video format.');
     return;
   }
 
   btn.classList.add('busy');
 
-  // Native pixel kalitesi — c1 DPR-scaled, physical min tarafı (max 1080, upscale yok)
+  // Native pixel quality — c1 is DPR-scaled, take the physical min side (max 1080, no upscale)
   const dprMp4 = window._dpr || 1;
   const Wlog2  = FF.logicalW || window.innerWidth;
   const Hlog2  = FF.logicalH || window.innerHeight;
@@ -2536,9 +2536,9 @@ async function exportSoulMp4() {
   const EXPORT_SIZE = Math.min(Math.round(physMin), 1080);
   const FPS         = 30;
   const DURATION    = 15;
-  const FRAME_COUNT = FPS * DURATION;  // 450 frame
+  const FRAME_COUNT = FPS * DURATION;  // 450 frames
 
-  const state = beginSoulCapture();
+  const state = beginSigilCapture();
 
   const off    = document.createElement('canvas');
   off.width    = EXPORT_SIZE;
@@ -2549,11 +2549,11 @@ async function exportSoulMp4() {
   const sx       = FF.cx * dprMp4 - cropSize / 2;
   const sy       = FF.cy * dprMp4 - cropSize / 2;
 
-  // Stream — captureStream(FPS), MediaRecorder frame-rate ile senkron
+  // Stream — captureStream(FPS), in sync with the MediaRecorder frame-rate
   const stream   = off.captureStream(FPS);
   const recorder = new MediaRecorder(stream, {
     mimeType:            picked.mime,
-    videoBitsPerSecond:  8_000_000,   // 8 Mbps — premium, gradient detay korunur
+    videoBitsPerSecond:  8_000_000,   // 8 Mbps — premium, preserves gradient detail
   });
 
   const chunks = [];
@@ -2568,8 +2568,8 @@ async function exportSoulMp4() {
   recorder.start();
 
   try {
-    // İlk frame'i çiz (stream aktivasyonu)
-    drawSoulCaptureFrame(0, DURATION, state.rotY, offCtx, EXPORT_SIZE, sx, sy, cropSize);
+    // Draw the first frame (activates the stream)
+    drawSigilCaptureFrame(0, DURATION, state.rotY, offCtx, EXPORT_SIZE, sx, sy, cropSize);
 
     const frameInterval = 1000 / FPS;
     const startTime     = performance.now();
@@ -2578,23 +2578,23 @@ async function exportSoulMp4() {
       const target = startTime + i * frameInterval;
       const wait   = Math.max(1, target - performance.now());
       await new Promise(r => setTimeout(r, wait));
-      drawSoulCaptureFrame(i / FRAME_COUNT, DURATION, state.rotY, offCtx, EXPORT_SIZE, sx, sy, cropSize);
+      drawSigilCaptureFrame(i / FRAME_COUNT, DURATION, state.rotY, offCtx, EXPORT_SIZE, sx, sy, cropSize);
       btn.textContent = `⬇ RECORDING ${Math.round((i / FRAME_COUNT) * 100)}%`;
     }
 
     recorder.stop();
     await stoppedPromise;
 
-    endSoulCapture(state);
+    endSigilCapture(state);
 
     const blob = new Blob(chunks, { type: picked.mime });
-    downloadSoulBlob(blob, picked.ext);
+    downloadSigilBlob(blob, picked.ext);
     btn.classList.remove('busy');
     btn.textContent = '⬇ EXPORT';
   } catch (err) {
     console.error('MP4 export failed:', err);
     try { recorder.stop(); } catch {}
-    endSoulCapture(state);
+    endSigilCapture(state);
     btn.classList.remove('busy');
     btn.textContent = '⬇ EXPORT';
   }

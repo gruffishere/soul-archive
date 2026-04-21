@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>SOUL ARCHIVE — 6529 Identity Portrait</title>
+<title>THE SIGILS — 6529 Identity Portrait</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  /* Mobile dokunma optimizasyonları — double-tap zoom gecikmesi yok, tap highlight kapalı */
+  /* Mobile touch optimizations — no double-tap zoom delay, tap highlight disabled */
   button, a, .export-opt, .legend-row {
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
@@ -26,7 +26,7 @@
     width: 100vw;
   }
 
-  /* ── ENTRY SCREEN (kozmik/minimal) ── */
+  /* ── ENTRY SCREEN (cosmic/minimal) ── */
   #entry {
     position: fixed;
     inset: 0;
@@ -239,8 +239,8 @@
     line-height: 1;
   }
 
-  /* Soul name — tier isminin altında, cüzdanın kişisel karakteri */
-  .hud-soulname {
+  /* Sigil name — shown below the tier, a wallet's personal character */
+  .hud-sigilname {
     display: block;
     font-family: 'Bebas Neue', sans-serif;
     font-size: clamp(0.78rem, 1.6vw, 1.0rem);
@@ -250,7 +250,7 @@
     line-height: 1;
   }
 
-  /* Her TIER/NAME satırı — label + değer yan yana, sağa hizalı */
+  /* Each TIER/NAME row — label + value side by side, right-aligned */
   .hud-line {
     display: block;
     line-height: 1;
@@ -269,7 +269,7 @@
     vertical-align: baseline;
   }
 
-  /* Live data indicator — tıklanabilir refresh butonu olarak da işlev görür */
+  /* Live data indicator — also functions as a clickable refresh button */
   .hud-live {
     display: none;
     align-items: center;
@@ -318,7 +318,7 @@
     gap: 0;
   }
 
-  /* Params listesi — her satır: renk noktası + key + value */
+  /* Params list — each row: color dot + key + value */
   .pline {
     display: flex;
     align-items: center;
@@ -361,7 +361,7 @@
 
   #resetBtn:hover { color: #fff; }
 
-  /* Rainbow konturlu ABOUT butonu — conic gradient border, yavaşça döner */
+  /* ABOUT button with rainbow outline — conic gradient border, rotates slowly */
   @property --rb-angle {
     syntax: '<angle>';
     initial-value: 0deg;
@@ -400,7 +400,7 @@
   .rainbow-btn:hover { color: #fff !important; }
   .rainbow-btn:hover::before { animation-duration: 5s; }
 
-  /* Üst kontroller — perf + export yan yana */
+  /* Top controls — perf + export side by side */
   #topCtrls {
     position: fixed;
     top: clamp(14px, 2.5vw, 28px);
@@ -420,7 +420,7 @@
     padding: 0.35rem 1rem;
     cursor: pointer;
     transition: all 0.3s;
-    white-space: nowrap;  /* Text hep tek satır */
+    white-space: nowrap;  /* Always keep the text on a single line */
   }
 
   #perfBtn {
@@ -444,7 +444,7 @@
     color: rgba(180, 200, 255, 0.85);
   }
 
-  /* ── Export bar — alttan kayarak açılan seçenek çubuğu ── */
+  /* ── Export bar — option bar that slides up from the bottom ── */
   #exportBar {
     position: fixed;
     bottom: -90px;
@@ -499,7 +499,7 @@
     text-transform: lowercase;
   }
 
-  /* ── Zoom slider — sağ kenarda dikey bar ── */
+  /* ── Zoom slider — vertical bar on the right edge ── */
   #zoomSlider {
     position: fixed;
     right: clamp(16px, 2.5vw, 28px);
@@ -560,7 +560,7 @@
   }
   .zs-thumb.grabbing { cursor: grabbing; }
 
-  /* Mobile — slider biraz büyür, iconlar tap-friendly */
+  /* Mobile — slider grows a bit, icons become tap-friendly */
   @media (max-width: 600px) {
     #zoomSlider {
       right: max(12px, env(safe-area-inset-right, 0px));
@@ -654,10 +654,10 @@
   #unbornBack:hover { border-color: #fff; color: #fff; }
 
   /* ═══════════════════════════════════════════════════════════ */
-  /*  MOBILE (≤ 600px) — safe-area, büyük tap, sıkı yerleşim     */
+  /*  MOBILE (≤ 600px) — safe-area, large tap targets, tight layout */
   /* ═══════════════════════════════════════════════════════════ */
   @media (max-width: 600px) {
-    /* Top kontroller — mobilde HUD etiketlerinin hemen altı */
+    /* Top controls — on mobile, just below the HUD labels */
     #topCtrls {
       top: calc(env(safe-area-inset-top, 0px) + 100px);
       gap: 6px;
@@ -669,7 +669,7 @@
       min-height: 36px;
     }
 
-    /* Export bar — daha sıkı, safe-area bottom'a saygılı */
+    /* Export bar — tighter, respects the bottom safe-area */
     #exportBar {
       gap: 6px;
       padding: 8px 10px;
@@ -685,7 +685,7 @@
     .export-opt .opt-label { font-size: 0.72rem; letter-spacing: 0.18em; }
     .export-opt .opt-spec  { font-size: 0.46rem; letter-spacing: 0.06em; }
 
-    /* HUD — mobilde daha büyük relative, safe-area'dan kaç */
+    /* HUD — larger on mobile, relative sized, away from the safe-area */
     #hud {
       padding-top:    max(clamp(16px, 3vw, 32px), calc(env(safe-area-inset-top, 0px) + 48px));
       padding-left:   max(clamp(16px, 3vw, 32px), env(safe-area-inset-left, 16px));
@@ -696,25 +696,25 @@
     .hud-title { font-size: 0.90rem; letter-spacing: 0.25em; }
     .hud-addr  { font-size: 0.58rem; }
     .hud-class    { font-size: 1.6rem; letter-spacing: 0.22em; }
-    .hud-soulname { font-size: 0.82rem; letter-spacing: 0.18em; }
+    .hud-sigilname { font-size: 0.82rem; letter-spacing: 0.18em; }
     .hud-label    { font-size: 0.52rem; letter-spacing: 0.18em; }
 
     .hud-params { line-height: 1.7; }
 
-    /* Reset button — safe-area'dan kaç, belirgin */
+    /* Reset button — stays away from the safe-area, stays prominent */
     #resetBtn {
       bottom: calc(max(14px, env(safe-area-inset-bottom, 0px)) + 8px);
       font-size: 0.62rem;
     }
 
-    /* Entry screen — tight boyutlar */
+    /* Entry screen — tight sizes */
     .entry-title { font-size: clamp(2.5rem, 14vw, 4.5rem); }
     .entry-sub   { font-size: 0.62rem; letter-spacing: 0.22em; margin-bottom: 2rem; }
 
     #walletInput { font-size: 0.85rem; padding: 0.8rem 0; }
     #readBtn     { padding: 0.85rem 2rem; min-height: 44px; }
 
-    /* Hover card — mobilde biraz daha büyük */
+    /* Hover card — a bit larger on mobile */
     #hoverCard {
       padding: 10px 14px;
       min-width: 130px;
@@ -723,13 +723,13 @@
     #hoverCard .hc-value { font-size: 0.85rem; }
     #hoverCard .hc-desc  { font-size: 0.52rem; }
 
-    /* Unborn — mobilde sığsın */
+    /* Unborn — fits on mobile */
     .unborn-title { font-size: clamp(1.8rem, 10vw, 3.5rem); }
     .unborn-sub   { font-size: 0.62rem; }
     #unbornBack   { padding: 0.75rem 1.5rem; min-height: 44px; }
   }
 
-  /* Çok dar telefonlar (≤ 360px) için ekstra sıkıştırma */
+  /* Extra compression for very narrow phones (≤ 360px) */
   @media (max-width: 360px) {
     #perfBtn, .export-btn {
       padding: 0.45rem 0.5rem;
@@ -742,7 +742,7 @@
   }
 
   /* ═══════════════════════════════════════════════════════════ */
-  /*  KIN OVERLAY — ruh kardeşleri haritası                      */
+  /*  KIN OVERLAY — map of kindred sigils                         */
   /* ═══════════════════════════════════════════════════════════ */
   #kinOverlay {
     position: fixed;
@@ -785,7 +785,7 @@
     z-index: 1;
   }
 
-  /* Merkez kart — kullanıcının kendisi */
+  /* Center card — the user themselves */
   .kin-center {
     position: absolute;
     top: 50%;
@@ -821,7 +821,7 @@
     margin-top: 0.5rem;
   }
 
-  /* Kin kartları — 3 slot */
+  /* Kin cards — 3 slots */
   .kin-card {
     position: absolute;
     width: clamp(160px, 18vw, 200px);
@@ -832,7 +832,7 @@
     transition: border-color 0.2s, transform 0.2s;
     text-align: center;
     z-index: 2;
-    display: none;  /* JS ile visible yapılır, kin varsa */
+    display: none;  /* JS makes it visible when kin exists */
   }
   .kin-card.visible { display: block; }
   .kin-card:hover {
@@ -895,7 +895,7 @@
     word-break: break-all;
   }
 
-  /* Kin mobile (≤ 600px) — dikey stack */
+  /* Kin mobile (≤ 600px) — vertical stack */
   @media (max-width: 600px) {
     .kin-center {
       top: 1.5rem;
@@ -920,15 +920,15 @@
       overflow-y: auto;
     }
     .kin-slot-left, .kin-slot-right, .kin-slot-bottom { top: auto; bottom: auto; left: auto; right: auto; }
-    .kin-lines { display: none; }  /* mobile'da çizgileri gizle */
+    .kin-lines { display: none; }  /* hide the lines on mobile */
   }
 
-  /* Touch device: hover state'ler pürüzsüz (hover yok, tap var) */
+  /* Touch device: keep hover states clean (no hover, only tap) */
   @media (hover: none) {
     #readBtn:hover, .export-btn:hover, .export-opt:hover,
     #submitManual:hover, #unbornBack:hover, #resetBtn:hover,
     .demo-link:hover, #perfBtn:hover {
-      /* Touch cihazda sticky hover state'leri önle */
+      /* Prevent sticky hover states on touch devices */
       background: inherit;
       border-color: inherit;
       color: inherit;
@@ -940,16 +940,16 @@
 
 <!-- ENTRY SCREEN -->
 <div id="entry">
-  <div class="entry-title">SOUL ARCHIVE</div>
+  <div class="entry-title">THE SIGILS</div>
   <div class="entry-sub">6529 identity portrait / by wallet</div>
 
   <div class="input-wrap">
     <input id="walletInput" type="text" placeholder="0x... · ENS · handle" autocomplete="off" spellcheck="false">
-    <button id="readBtn" onclick="readSoul()">READ SOUL →</button>
+    <button id="readBtn" onclick="readSigil()">READ SIGIL →</button>
     <div id="statusMsg"></div>
   </div>
 
-  <!-- MANUAL FORM (API başarısız olursa görünür) -->
+  <!-- MANUAL FORM (shown when the API fails) -->
   <div id="manualForm">
     <div class="manual-label" style="margin-top:1.5rem; margin-bottom:0.5rem;">— manual entry —</div>
     <div class="manual-row">
@@ -996,7 +996,7 @@
         </div>
       </div>
     </div>
-    <button id="submitManual" onclick="submitManual()">RENDER SOUL →</button>
+    <button id="submitManual" onclick="submitManual()">RENDER SIGIL →</button>
   </div>
 </div>
 
@@ -1010,7 +1010,7 @@
 <!-- HUD -->
 <div id="hud">
   <div class="hud-tl">
-    <span class="hud-title">SOUL ARCHIVE</span>
+    <span class="hud-title">THE SIGILS</span>
     <span class="hud-addr" id="hudAddr"></span>
   </div>
   <div class="hud-tr">
@@ -1020,9 +1020,9 @@
     </span>
     <span class="hud-line">
       <span class="hud-label">NAME:</span>
-      <span class="hud-soulname" id="hudSoulname"></span>
+      <span class="hud-sigilname" id="hudSigilname"></span>
     </span>
-    <span class="hud-live" id="liveIndicator" onclick="refreshSoulData()" title="click to refresh">
+    <span class="hud-live" id="liveIndicator" onclick="refreshSigilData()" title="click to refresh">
       <span class="live-dot"></span>
       <span id="liveText">LIVE</span>
     </span>
@@ -1036,25 +1036,25 @@
 <div id="topCtrls">
   <button id="perfBtn" onclick="togglePerf()">⚡ PERF MODE</button>
   <button id="exportBtn" class="export-btn" onclick="toggleExportBar()">⬇ EXPORT</button>
-  <button id="shareXBtn" class="export-btn" onclick="shareSoulToX()">𝕏 SHARE</button>
+  <button id="shareXBtn" class="export-btn" onclick="shareSigilToX()">𝕏 SHARE</button>
   <button id="kinBtn" class="export-btn" onclick="openKin()">◎ KIN</button>
   <a id="aboutBtn" class="export-btn rainbow-btn" href="about.html" target="_blank" rel="noopener">ⓘ ABOUT</a>
 </div>
 
-<!-- Export bar — alttan kayarak açılır, PNG/GIF/MP4 seçenekleri -->
+<!-- Export bar — slides up from the bottom, PNG/GIF/MP4 options -->
 <div id="exportBar">
-  <button class="export-opt" onclick="exportSoulPng()">
+  <button class="export-opt" onclick="exportSigilPng()">
     <span class="opt-label">PNG</span><span class="opt-spec">still, 1080²</span>
   </button>
-  <button class="export-opt" onclick="exportSoulGif()">
+  <button class="export-opt" onclick="exportSigilGif()">
     <span class="opt-label">GIF</span><span class="opt-spec">540² · 12fps · 12s</span>
   </button>
-  <button class="export-opt" onclick="exportSoulMp4()">
+  <button class="export-opt" onclick="exportSigilMp4()">
     <span class="opt-label">MP4</span><span class="opt-spec">1080² · 30fps · 15s</span>
   </button>
 </div>
 
-<!-- Zoom slider — sağ kenar, dikey: + üstte, − altta -->
+<!-- Zoom slider — right edge, vertical: + on top, − on bottom -->
 <div id="zoomSlider">
   <div class="zs-icon zs-plus" aria-label="zoom in">+</div>
   <div class="zs-track">
@@ -1070,7 +1070,7 @@
   <div class="hc-desc"  id="hcDesc"></div>
 </div>
 
-<!-- KIN OVERLAY — aynı Soul Name modifier/archetype paylaşan ruh kardeşleri -->
+<!-- KIN OVERLAY — kindred sigils that share the same Sigil Name modifier/archetype -->
 <div id="kinOverlay">
   <button class="kin-close" onclick="closeKin()" aria-label="close">×</button>
   <svg class="kin-lines" aria-hidden="true"></svg>
@@ -1107,17 +1107,17 @@
 <!-- UNBORN STATE -->
 <div id="unborn">
   <div class="unborn-title">NO ARCHIVE FOUND</div>
-  <div class="unborn-sub">this soul has not yet entered the memes</div>
+  <div class="unborn-sub">this sigil has not yet entered the memes</div>
   <button id="unbornBack" onclick="resetAll()">← try another address</button>
 </div>
 
 <script>
 // ═══════════════════════════════════════════════════════
-//  SOUL ARCHIVE — Chromatic Orb Visual System v2
+//  THE SIGILS — Chromatic Orb Visual System v2
 // ═══════════════════════════════════════════════════════
 
-// 9 TDH tier — tier numarası görsel "unlock"ları tetikler (3+'dan itibaren)
-const SOUL_CLASSES = [
+// 9 TDH tiers — the tier number triggers visual "unlocks" (from 3+ onward)
+const SIGIL_CLASSES = [
   { name: 'ECHO',       min: 0,          max: 9999,      tier: 1 },
   { name: 'SIGNAL',     min: 10000,      max: 99999,     tier: 2 },
   { name: 'EMERGING',   min: 100000,     max: 499999,    tier: 3 },
@@ -1129,7 +1129,7 @@ const SOUL_CLASSES = [
   { name: 'PHENOMENON', min: 20000000,   max: Infinity,  tier: 9 },
 ];
 
-// Her sezon için spektral hue (Sezon 1 → 14)
+// Spectral hue per season (Season 1 → 14)
 const SZN_HUE = [200, 220, 245, 270, 295, 320, 345, 15, 40, 65, 100, 140, 170, 190];
 
 // ═══════════════════════════════════════════════════════
@@ -1139,11 +1139,11 @@ const SZN_HUE = [200, 220, 245, 270, 295, 320, 345, 15, 40, 65, 100, 140, 170, 1
 function lerp(a, b, t) { return a + (b - a) * Math.max(0, Math.min(1, t)); }
 function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
 
-function getSoulClass(tdh) {
-  for (let i = SOUL_CLASSES.length - 1; i >= 0; i--) {
-    if (tdh >= SOUL_CLASSES[i].min) return SOUL_CLASSES[i];
+function getSigilClass(tdh) {
+  for (let i = SIGIL_CLASSES.length - 1; i >= 0; i--) {
+    if (tdh >= SIGIL_CLASSES[i].min) return SIGIL_CLASSES[i];
   }
-  return SOUL_CLASSES[0];
+  return SIGIL_CLASSES[0];
 }
 
 function normalizeTDH(tdh) {
@@ -1169,7 +1169,7 @@ function shortAddr(addr) {
 //  STATE
 // ═══════════════════════════════════════════════════════
 
-let soul    = null;
+let sigil    = null;
 let animId  = null;
 let T       = 0;
 let isMobile = window.innerWidth < 600;
@@ -1182,7 +1182,7 @@ function togglePerf() {
   const btn = document.getElementById('perfBtn');
   btn.textContent = perfMode ? '⚡ PERF MODE' : '✦ FULL QUALITY';
   btn.classList.toggle('perf-on', perfMode);
-  if (soul) buildVisuals();
+  if (sigil) buildVisuals();
 }
 
 const c1 = document.getElementById('c1');
@@ -1193,14 +1193,14 @@ const ctx2 = c2.getContext('2d');
 const ctx3 = c3.getContext('2d');
 
 // ═══════════════════════════════════════════════════════
-//  CANVAS BOYUTLANDIRMA
+//  CANVAS SIZING
 // ═══════════════════════════════════════════════════════
 
 function resize() {
   const W = window.innerWidth;
   const H = window.innerHeight;
-  // Retina / yüksek-DPR ekranlarda internal buffer'ı piksel yoğunluğuyla çarp,
-  // CSS size logical kalsın. iPhone'da blur'ı bu çözer.
+  // On Retina / high-DPR screens, multiply the internal buffer by the pixel density
+  // while keeping CSS size logical. This fixes the blur on iPhone.
   const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
   window._dpr = dpr;
   [c1, c2, c3].forEach(c => {
@@ -1209,10 +1209,10 @@ function resize() {
     c.style.width  = W + 'px';
     c.style.height = H + 'px';
   });
-  // Context'i DPR'a ayarla — çizim logical koordinatlarla yapılır
+  // Scale the context to DPR — drawing uses logical coordinates
   [ctx1, ctx2, ctx3].forEach(ctx => ctx.setTransform(dpr, 0, 0, dpr, 0, 0));
   isMobile = W < 600;
-  if (soul) buildVisuals();
+  if (sigil) buildVisuals();
 }
 
 window.addEventListener('resize', resize);
@@ -1222,17 +1222,17 @@ resize();
 //  API
 // ═══════════════════════════════════════════════════════
 
-async function readSoul() {
+async function readSigil() {
   const addr = document.getElementById('walletInput').value.trim();
   if (!addr) return;
   const btn = document.getElementById('readBtn');
   const msg = document.getElementById('statusMsg');
   btn.disabled = true;
-  msg.textContent = 'reading soul...';
+  msg.textContent = 'reading sigil...';
   try {
-    const data = await fetchSoulFromApi(addr);
+    const data = await fetchSigilFromApi(addr);
     if (data.unborn) {
-      _pushSoulUrl(addr);  // URL'i koru — unborn da paylaşılabilir olsun
+      _pushSigilUrl(addr);  // preserve the URL — so the unborn state can also be shared
       showUnborn();
       btn.disabled = false;
       msg.textContent = '';
@@ -1241,8 +1241,8 @@ async function readSoul() {
     if (data.error) throw new Error(data.error);
     msg.textContent = '';
     btn.disabled = false;
-    _pushSoulUrl(addr);
-    renderSoul(data);
+    _pushSigilUrl(addr);
+    renderSigil(data);
   } catch (err) {
     msg.textContent = 'API unavailable — use manual entry below';
     document.getElementById('manualForm').style.display = 'flex';
@@ -1251,11 +1251,11 @@ async function readSoul() {
 }
 
 document.getElementById('walletInput').addEventListener('keydown', e => {
-  if (e.key === 'Enter') readSoul();
+  if (e.key === 'Enter') readSigil();
 });
 
 function submitManual() {
-  // soul-organism.js tarafından override edilir — bu fallback
+  // overridden by sigil-organism.js — this is the fallback
   const data = {
     address:     document.getElementById('walletInput').value.trim() || 'manual',
     tdh:         parseFloat(document.getElementById('m_tdh').value)         || 0,
@@ -1269,7 +1269,7 @@ function submitManual() {
     rep:         parseFloat(document.getElementById('m_rep').value)         || 0,
   };
   if (data.tdh === 0 && data.unique === 0) { showUnborn(); return; }
-  renderSoul(data);
+  renderSigil(data);
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1282,13 +1282,13 @@ function showUnborn() {
 }
 
 function resetAll() {
-  _pushSoulUrl(null);  // URL'i temizle
+  _pushSigilUrl(null);  // clear the URL
   if (typeof clearHoverState === 'function') clearHoverState();
   if (typeof stopAutoRefresh === 'function') stopAutoRefresh();
   const liveEl = document.getElementById('liveIndicator');
   if (liveEl) liveEl.classList.remove('visible', 'stale', 'refreshing');
   if (animId) { cancelAnimationFrame(animId); animId = null; }
-  soul = null;
+  sigil = null;
   ctx1.clearRect(0, 0, c1.width, c1.height);
   ctx2.clearRect(0, 0, c2.width, c2.height);
   ctx3.clearRect(0, 0, c3.width, c3.height);
@@ -1310,11 +1310,11 @@ function resetAll() {
 }
 
 // ═══════════════════════════════════════════════════════
-//  RENDER SOUL
+//  RENDER SIGIL
 // ═══════════════════════════════════════════════════════
 
-function renderSoul(data) {
-  soul = data;
+function renderSigil(data) {
+  sigil = data;
   const entry = document.getElementById('entry');
   entry.classList.add('fade-out');
   setTimeout(() => { entry.style.display = 'none'; }, 800);
@@ -1338,37 +1338,37 @@ function renderSoul(data) {
 // ═══════════════════════════════════════════════════════
 
 function buildHUD() {
-  const sc = getSoulClass(soul.tdh);
-  document.getElementById('hudAddr').textContent     = shortAddr(soul.address);
+  const sc = getSigilClass(sigil.tdh);
+  document.getElementById('hudAddr').textContent     = shortAddr(sigil.address);
   document.getElementById('hudClass').textContent    = sc.name;
   document.getElementById('hudClass').style.color    = sc.color || '#fff';
-  // fallback buildHUD — tam işlev soul-organism.js tarafından override edilir
+  // fallback buildHUD — the full implementation is overridden by sigil-organism.js
 }
 
-// visual rendering → soul-organism.js
+// visual rendering → sigil-organism.js
 
-// buildVisuals → soul-organism.js
+// buildVisuals → sigil-organism.js
 
 // ═══════════════════════════════════════════════════════
-//  URL PERSISTENCY — paylaşılır ?addr=... linki
+//  URL PERSISTENCY — shareable ?addr=... link
 // ═══════════════════════════════════════════════════════
 let _suppressUrlWrite = false;
 
-function _pushSoulUrl(addr) {
+function _pushSigilUrl(addr) {
   if (_suppressUrlWrite) return;
   const newSearch = addr ? `?addr=${encodeURIComponent(addr)}` : '';
   if (window.location.search === newSearch) return;
   history.pushState({ addr: addr || null }, '', window.location.pathname + newSearch);
 }
 
-// Geri / ileri tuşu — URL'den state'i yeniden inşa et (pushState tetiklemeden)
+// Back / forward button — rebuild state from the URL (without triggering pushState)
 window.addEventListener('popstate', async () => {
   _suppressUrlWrite = true;
   try {
     const addr = new URLSearchParams(window.location.search).get('addr');
     if (addr) {
       document.getElementById('walletInput').value = addr;
-      await readSoul();
+      await readSigil();
     } else {
       resetAll();
     }
@@ -1377,17 +1377,17 @@ window.addEventListener('popstate', async () => {
   }
 });
 
-// İlk yükleme — URL'de addr varsa otomatik aç
+// Initial load — auto-open if there's an addr in the URL
 window.addEventListener('DOMContentLoaded', () => {
   const addr = new URLSearchParams(window.location.search).get('addr');
   if (addr) {
     document.getElementById('walletInput').value = addr;
-    readSoul();
+    readSigil();
   }
 });
 
 </script>
 <script src="vendor/gif.js"></script>
-<script src="soul-organism.js"></script>
+<script src="sigil-organism.js"></script>
 </body>
 </html>

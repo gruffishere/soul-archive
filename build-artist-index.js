@@ -3,22 +3,22 @@
 // Run: node build-artist-index.js  → writes artist-index.json
 // Requires Node 18+ (native fetch).
 //
-// Kaynak: /api/nfts — 6529'un tüm koleksiyonlarını döndürür (Memes + Gradient).
-// Biz sadece "The Memes by 6529" koleksiyonunu istiyoruz; diğerleri filtrelenir.
+// Source: /api/nfts — returns all of 6529's collections (Memes + Gradient).
+// We only want "The Memes by 6529" collection; the others are filtered out.
 //
-// Her artist için ayrıca TDH/consolidation + profile çekilir, Soul Name hesaplanır.
-// artist-index.json içindeki `profiles` alanı client-side KIN matching için kullanılır.
+// For each artist we also fetch TDH/consolidation + profile and compute the Sigil Name.
+// The `profiles` field in artist-index.json is used for client-side KIN matching.
 
 const fs   = require('fs');
 const path = require('path');
 
 const MEMES_COLLECTION = 'The Memes by 6529';
 const PAGE_SIZE    = 1000;
-const CHUNK_SIZE   = 5;     // paralel fetch (rate limit için düşük)
-const CHUNK_DELAY  = 150;   // ms — chunk'lar arası bekleme
-const SAFETY_LIMIT = 50;    // pagination loop koruması
-const RETRY_MAX    = 3;     // başarısız istekleri kaç kez tekrarla
-const RETRY_DELAY  = 400;   // ms — retry öncesi bekleme (exponential)
+const CHUNK_SIZE   = 5;     // parallel fetch count (kept low for rate limits)
+const CHUNK_DELAY  = 150;   // ms — wait between chunks
+const SAFETY_LIMIT = 50;    // pagination loop guard
+const RETRY_MAX    = 3;     // how many times to retry failed requests
+const RETRY_DELAY  = 400;   // ms — wait before retry (exponential)
 
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
@@ -27,14 +27,14 @@ async function fetchJson(url) {
   if (!r.ok) throw new Error(`HTTP ${r.status} ${url}`);
   return r.json();
 }
-// Retry'lı fetch — 429/5xx alırsa artan bekleme ile yeniden dener, 404'te durur.
+// Fetch with retry — on 429/5xx it retries with increasing backoff, on 404 it stops.
 async function fetchJsonOrNull(url) {
   for (let attempt = 0; attempt < RETRY_MAX; attempt++) {
     try {
       const r = await fetch(url, { headers: { Accept: 'application/json' } });
       if (r.ok) return await r.json();
-      if (r.status === 404) return null;                 // yok → retry'sız
-      // 429 veya 5xx → retry
+      if (r.status === 404) return null;                 // not found → no retry
+      // 429 or 5xx → retry
       await sleep(RETRY_DELAY * (attempt + 1));
     } catch {
       await sleep(RETRY_DELAY * (attempt + 1));
@@ -79,12 +79,12 @@ function collectHandleCounts(nfts) {
   return counts;
 }
 
-// ── SOUL NAME LOGIC (soul-organism.js ile BİREBİR aynı olmalı) ──
-// Bu fonksiyonları burada aynen replike ediyoruz ki build-time'da
-// hesapladığımız isimler client'ta gösterilenlerle birebir eşleşsin.
-function soulHash(value) {
+// ── SIGIL NAME LOGIC (must be IDENTICAL to sigil-organism.js) ──
+// We replicate these functions here so the names we compute at build time
+// exactly match the ones shown on the client.
+function sigilHash(value) {
   let h = 2166136261;
-  const text = String(value || 'soul');
+  const text = String(value || 'sigil');
   for (let i = 0; i < text.length; i++) {
     h ^= text.charCodeAt(i);
     h = Math.imul(h, 16777619);
@@ -122,11 +122,11 @@ function getTier(tdh) {
   return 1;                          // ECHO
 }
 
-function generateSoulName(s) {
+function generateSigilName(s) {
   if (!s) return '';
   const addr    = s.address || 'manual';
-  const seedM   = soulHash(addr + ':mod');
-  const seedC   = soulHash(addr + ':core');
+  const seedM   = sigilHash(addr + ':mod');
+  const seedC   = sigilHash(addr + ':core');
 
   let modifier;
   const tier   = getTier(s.tdh);
@@ -183,18 +183,18 @@ function generateSoulName(s) {
   return `${modifier} ${core}`;
 }
 
-// Bazı seize-handle'lar 6529 API'de direkt handle lookup'ında 404 dönüyor
-// (örn. gruffishere'in profile endpoint'te karşılığı yok ama gruffdzn.eth var).
-// Bu map automation-dostu bir fallback katmanı — build-time script okuyor,
-// yeni bir edge case varsa buraya satır eklenir, manuel komut gerekmez.
+// Some seize-handles return 404 when looked up directly on the 6529 API
+// (e.g. "gruffishere" has no match on the profile endpoint, but "gruffdzn.eth" does).
+// This map is an automation-friendly fallback layer — the build-time script reads it,
+// and new edge cases just get another line here; no manual commands required.
 const SEIZE_HANDLE_FALLBACKS = {
   'gruffishere': 'gruffdzn.eth',
-  // Yeni case'ler: 'seize_handle_lowercase': 'working_lookup_id',
+  // New cases: 'seize_handle_lowercase': 'working_lookup_id',
 };
 
-// ── ARTIST PROFILE FETCH — TDH + profile + Soul Name ─────────────
+// ── ARTIST PROFILE FETCH — TDH + profile + Sigil Name ─────────────
 async function fetchArtistProfile(handle, memeCount) {
-  // 3 aşamalı lookup: direkt → .eth eki → özel fallback map
+  // 3-stage lookup: direct → append .eth → custom fallback map
   async function tryLookup(id) {
     const [td, profile] = await Promise.all([
       fetchJsonOrNull(`https://api.6529.io/api/tdh/consolidation/${encodeURIComponent(id)}`),
@@ -231,8 +231,8 @@ async function fetchArtistProfile(handle, memeCount) {
     walletCount:     wallets.length || 1,
   };
 
-  const soulName = generateSoulName({ address, ...stats });
-  const [modifier, ...coreParts] = soulName.split(' ');
+  const sigilName = generateSigilName({ address, ...stats });
+  const [modifier, ...coreParts] = sigilName.split(' ');
   const archetype = coreParts.join(' ');
 
   return {
@@ -241,7 +241,7 @@ async function fetchArtistProfile(handle, memeCount) {
     primary_wallet: primary,
     consolidation_wallets: wallets,
     tier: getTier(tdh),
-    soulName,
+    sigilName,
     modifier,
     archetype,
     stats,
@@ -262,7 +262,7 @@ async function resolveArtists(handleCount) {
         const data  = await fetchArtistProfile(h, count);
         if (!data) { failed++; return; }
 
-        // 1) walletCount — cüzdan eşleştirmesi için (mevcut davranış)
+        // 1) walletCount — for wallet matching (existing behavior)
         for (const addr of data.consolidation_wallets) {
           const key = addr.toLowerCase();
           walletCount[key] = (walletCount[key] || 0) + count;
@@ -272,8 +272,8 @@ async function resolveArtists(handleCount) {
           if (!walletCount[key]) walletCount[key] = count;
         }
 
-        // 2) profiles — KIN matching için (yeni alan)
-        // Unborn (TDH=0 & unique=0) artistleri kin pool'undan hariç tut
+        // 2) profiles — for KIN matching (new field)
+        // Exclude unborn artists (TDH=0 & unique=0) from the kin pool
         const s = data.stats;
         if (s.tdh === 0 && s.unique === 0) {
           skipped++;
@@ -282,7 +282,7 @@ async function resolveArtists(handleCount) {
             handle:         data.handle,
             primary_wallet: data.primary_wallet,
             tier:           data.tier,
-            soulName:       data.soulName,
+            sigilName:       data.sigilName,
             modifier:       data.modifier,
             archetype:      data.archetype,
             stats:          s,
@@ -311,7 +311,7 @@ async function resolveArtists(handleCount) {
   const handleCount = collectHandleCounts(nfts);
   console.log(`[build] ${Object.keys(handleCount).length} unique handles`);
 
-  console.log('[build] resolving handles → stats + Soul Name + wallets...');
+  console.log('[build] resolving handles → stats + Sigil Name + wallets...');
   const { walletCount, profiles } = await resolveArtists(handleCount);
 
   const output = {
@@ -319,7 +319,7 @@ async function resolveArtists(handleCount) {
     nftCount:  nfts.length,
     handles:   handleCount,
     wallets:   walletCount,
-    profiles,  // handle → { soulName, modifier, archetype, tier, stats, ... }
+    profiles,  // handle → { sigilName, modifier, archetype, tier, stats, ... }
   };
 
   const outPath = path.join(__dirname, 'artist-index.json');
