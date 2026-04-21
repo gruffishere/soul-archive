@@ -60,7 +60,9 @@ function soulHue(address) {
 
 // Chroma shimmer — baz hue loop içinde ±CHROMA_AMP derece yavaşça kayar.
 // Her katmanın kendi fazı var → birlikte "nefes alan" irisli shift.
+// perfMode: sin çağrılarını atlar (her frame'de binlerce çağrı → büyük CPU kazancı)
 function chromaHue(base, phase) {
+  if (perfMode) return base;
   return (base + Math.sin(T * LOOP_CHROMA + phase) * CHROMA_AMP + 360) % 360;
 }
 
@@ -480,8 +482,9 @@ function buildVisuals() {
     scale:         lerp(0.0022, 0.0060, 1 - tdhN),
     // Base partiküller kristal tozu gibi (baseHue tabanlı, küçük).
     // Tier bonus partikülleri yıldız modunda parlar (tam spektrum, halo'lu).
-    baseParticleCount: Math.floor(lerp(180, perfMode ? 360 : 620, tdhN)),
-    starParticleCount: Math.max(0, tier - 2) * 50,
+    // perfMode: base tavanı ve star partikülleri düşer (en büyük perf kazancı burada)
+    baseParticleCount: Math.floor(lerp(180, perfMode ? 220 : 620, tdhN)),
+    starParticleCount: perfMode ? 0 : Math.max(0, tier - 2) * 50,
     get particleCount() { return this.baseParticleCount + this.starParticleCount; },
 
     // Tier bilgisi — draw fonksiyonları unlock'lar için kullanır
@@ -740,21 +743,23 @@ function drawOrbitalForms(ctx) {
       ctx.stroke();
     }
 
-    // Pass 3 — crystal edge: ön yarıda ince, yüksek-lümin kenar
-    for (let i = 0; i < segs; i++) {
-      const p1    = pts[i], p2 = pts[i + 1];
-      const depth = (p1.depth + p2.depth) * 0.5;
-      if (depth < 0.40) continue;
-      const edgeFade  = Math.min(1, (depth - 0.40) / 0.28);
-      const edgeAlpha = (0.38 + eff * 0.46) * edgeFade;
-      const hue       = hueAt(i, segs);
-      const lvlA      = levelAlphaAt(i, segs);
-      ctx.beginPath();
-      ctx.moveTo(p1.x, p1.y);
-      ctx.lineTo(p2.x, p2.y);
-      ctx.strokeStyle = `hsla(${hue}, 100%, 86%, ${edgeAlpha * lvlA})`;
-      ctx.lineWidth   = 0.6;
-      ctx.stroke();
+    // Pass 3 — crystal edge: ön yarıda ince, yüksek-lümin kenar (perf'te atlanır)
+    if (!perfMode) {
+      for (let i = 0; i < segs; i++) {
+        const p1    = pts[i], p2 = pts[i + 1];
+        const depth = (p1.depth + p2.depth) * 0.5;
+        if (depth < 0.40) continue;
+        const edgeFade  = Math.min(1, (depth - 0.40) / 0.28);
+        const edgeAlpha = (0.38 + eff * 0.46) * edgeFade;
+        const hue       = hueAt(i, segs);
+        const lvlA      = levelAlphaAt(i, segs);
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.strokeStyle = `hsla(${hue}, 100%, 86%, ${edgeAlpha * lvlA})`;
+        ctx.lineWidth   = 0.6;
+        ctx.stroke();
+      }
     }
 
     // BOOST companion — halkanın dışında paralel altın çizgi, boost ile belirir
@@ -816,7 +821,7 @@ function drawOrbitalForms(ctx) {
       }
     } else {
       // Diğer halkalar — mevcut orbital dot davranışı
-      const dotN = 4 + Math.floor(eff * 12);
+      const dotN = perfMode ? (3 + Math.floor(eff * 6)) : (4 + Math.floor(eff * 12));
       for (let i = 0; i < dotN; i++) {
         const ang   = (i / dotN) * Math.PI * 2 + dotAngularPhase;
         const p3    = ringPt(ang, radius, layer.incl, layer.az);
@@ -898,7 +903,8 @@ function drawForm() {
 function buildSparkles(seed, repN, levelN, tier) {
   const rng       = soulRng(soulHash(seed + 777));
   const tierBonus = Math.max(0, (tier || 1) - 5) * 2;   // PILLAR+ için bonus
-  const N         = 8 + Math.floor(repN * 10) + Math.floor(levelN * 5) + tierBonus;
+  const full      = 8 + Math.floor(repN * 10) + Math.floor(levelN * 5) + tierBonus;
+  const N         = perfMode ? Math.max(4, Math.floor(full * 0.5)) : full;
   const phi  = Math.PI * (3 - Math.sqrt(5));
   const sparkles = [];
   for (let i = 0; i < N; i++) {
@@ -978,7 +984,7 @@ function drawArmillaryFrame(ctx) {
     { incl: 0,              az: 0 },
     { incl: Math.PI * 0.5,  az: Math.PI * 0.5 },
   ];
-  if ((FF.tier || 1) >= 4) {
+  if (!perfMode && (FF.tier || 1) >= 4) {
     frames.push({ incl: Math.PI * 0.25, az: Math.PI * 0.25 });
     frames.push({ incl: Math.PI * 0.75, az: Math.PI * 1.30 });
   }
@@ -1048,15 +1054,17 @@ function drawArtistBeads(ctx) {
     const h2 = baseHue;                       // ana hue
     const h3 = (baseHue + 48) % 360;          // sağ-komşu hue
 
-    // 1) Dış rainbow glow — belirgin, yayılan
-    const outer = ctx.createRadialGradient(p2.x, p2.y, 0, p2.x, p2.y, r * 3.2);
-    outer.addColorStop(0,    `hsla(${h2}, 100%, 88%, ${0.50 + depth * 0.30})`);
-    outer.addColorStop(0.45, `hsla(${h2}, 100%, 68%, ${0.22 + depth * 0.18})`);
-    outer.addColorStop(1,    'transparent');
-    ctx.fillStyle = outer;
-    ctx.beginPath();
-    ctx.arc(p2.x, p2.y, r * 3.2, 0, Math.PI * 2);
-    ctx.fill();
+    // 1) Dış rainbow glow — belirgin, yayılan (perf'te atlanır)
+    if (!perfMode) {
+      const outer = ctx.createRadialGradient(p2.x, p2.y, 0, p2.x, p2.y, r * 3.2);
+      outer.addColorStop(0,    `hsla(${h2}, 100%, 88%, ${0.50 + depth * 0.30})`);
+      outer.addColorStop(0.45, `hsla(${h2}, 100%, 68%, ${0.22 + depth * 0.18})`);
+      outer.addColorStop(1,    'transparent');
+      ctx.fillStyle = outer;
+      ctx.beginPath();
+      ctx.arc(p2.x, p2.y, r * 3.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
 
     // 2) İnci gövdesi — off-center highlight + 3-hue iridescent geçiş (prizma sheen)
     const offX = -r * 0.35;
@@ -1078,11 +1086,13 @@ function drawArtistBeads(ctx) {
     ctx.lineWidth   = 1.0 + depth * 0.6;
     ctx.stroke();
 
-    // 4) Parlak highlight noktası — inci shimmer'ı
-    ctx.beginPath();
-    ctx.arc(p2.x + offX * 0.7, p2.y + offY * 0.7, r * 0.28, 0, Math.PI * 2);
-    ctx.fillStyle = `hsla(0, 0%, 100%, ${0.80 + depth * 0.20})`;
-    ctx.fill();
+    // 4) Parlak highlight noktası — inci shimmer'ı (perf'te atlanır)
+    if (!perfMode) {
+      ctx.beginPath();
+      ctx.arc(p2.x + offX * 0.7, p2.y + offY * 0.7, r * 0.28, 0, Math.PI * 2);
+      ctx.fillStyle = `hsla(0, 0%, 100%, ${0.80 + depth * 0.20})`;
+      ctx.fill();
+    }
   }
 
   ctx.restore();
@@ -1118,7 +1128,7 @@ function drawPrestigeRing(ctx) {
 // Tier 8+ (LEGEND): Ruhun dış sınırında yavaş sürüklenen nadir kozmik toz
 function drawCosmicDust(ctx) {
   if (!FF || (FF.tier || 1) < 8) return;
-  const count = 42;
+  const count = perfMode ? 20 : 42;
   const rng   = soulRng(soulHash(organism.seed + 853));
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
@@ -1151,7 +1161,7 @@ function drawPhenomenonAura(ctx) {
   const t      = T % period;
   if (t > 1.5) return;
   const progress  = t / 1.5;
-  const intensity = Math.sin(progress * Math.PI);
+  const intensity = Math.sin(progress * Math.PI) * (perfMode ? 0.5 : 1.0);
   if (intensity < 0.05) return;
 
   const inner = FF.soulR * 0.98;
@@ -1227,7 +1237,8 @@ function drawRepRays(ctx) {
   if (rep <= 0) return;
 
   const repScale  = Math.min(1, Math.sqrt(rep / 4_000_000));
-  const rayCount  = 4 + Math.floor(repScale * 46);   // 4–50 ray
+  // perfMode'da ray max'ı 20 ile sınırlı (full 50)
+  const rayCount  = 4 + Math.floor(repScale * (perfMode ? 16 : 46));
   const outerR    = FF.soulR * 0.97;
   const innerR    = FF.soulR * 0.66;                 // REP halkasının radyusu
   const baseHue   = 110;                             // sage
