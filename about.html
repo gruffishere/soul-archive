@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>About — Soul Archive</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  button, a { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    background: #000;
+    color: #f8f8fa;
+    font-family: 'Share Tech Mono', monospace;
+    min-height: 100vh;
+    padding: clamp(32px, 5vw, 64px) clamp(20px, 4vw, 40px);
+    padding-top:    max(clamp(32px, 5vw, 64px), calc(env(safe-area-inset-top, 0px) + 40px));
+    padding-bottom: max(clamp(32px, 5vw, 64px), calc(env(safe-area-inset-bottom, 0px) + 40px));
+    line-height: 1.65;
+    letter-spacing: 0.03em;
+  }
+
+  .wrap {
+    max-width: 720px;
+    margin: 0 auto;
+  }
+
+  /* Back link */
+  .back-link {
+    display: inline-block;
+    color: rgba(255, 255, 255, 0.70);
+    text-decoration: none;
+    font-size: 0.7rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    margin-bottom: 2.5rem;
+    transition: color 0.2s;
+  }
+  .back-link:hover { color: #fff; }
+
+  /* Header */
+  .doc-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(2.4rem, 8vw, 4.5rem);
+    letter-spacing: 0.18em;
+    line-height: 1;
+    color: #fff;
+  }
+  .doc-sub {
+    font-size: clamp(0.68rem, 1.3vw, 0.8rem);
+    letter-spacing: 0.32em;
+    color: rgba(255, 255, 255, 0.50);
+    text-transform: uppercase;
+    margin-top: 0.6rem;
+    margin-bottom: 3.5rem;
+  }
+
+  /* Sections */
+  section { margin-bottom: 3rem; }
+
+  h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(1.1rem, 2.2vw, 1.4rem);
+    letter-spacing: 0.28em;
+    color: rgba(255, 255, 255, 0.85);
+    border-top: 1px solid rgba(255, 255, 255, 0.14);
+    padding-top: 1.5rem;
+    margin-bottom: 1.1rem;
+    text-transform: uppercase;
+  }
+
+  p {
+    font-size: clamp(0.78rem, 1.4vw, 0.88rem);
+    color: rgba(255, 255, 255, 0.82);
+    margin-bottom: 1rem;
+  }
+  p.lede {
+    font-size: clamp(0.86rem, 1.6vw, 1rem);
+    color: rgba(255, 255, 255, 0.92);
+  }
+  p.dim {
+    color: rgba(255, 255, 255, 0.58);
+    font-size: clamp(0.72rem, 1.25vw, 0.8rem);
+  }
+
+  /* Parameter list */
+  .param {
+    display: grid;
+    grid-template-columns: 20px 130px 1fr;
+    gap: 12px 18px;
+    align-items: baseline;
+    padding: 0.85rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    font-size: clamp(0.74rem, 1.3vw, 0.82rem);
+  }
+  .param:last-of-type { border-bottom: none; }
+  .param .dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    align-self: center;
+  }
+  .param .pkey {
+    font-family: 'Bebas Neue', sans-serif;
+    letter-spacing: 0.22em;
+    font-size: clamp(0.78rem, 1.35vw, 0.9rem);
+    color: rgba(255, 255, 255, 0.95);
+  }
+  .param .pdesc {
+    color: rgba(255, 255, 255, 0.72);
+    line-height: 1.55;
+  }
+  .param .pdesc em {
+    color: rgba(255, 255, 255, 0.48);
+    font-style: normal;
+    font-size: 0.88em;
+    display: block;
+    margin-top: 2px;
+    letter-spacing: 0.05em;
+  }
+
+  /* Tier table */
+  .tiers {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: clamp(0.72rem, 1.3vw, 0.82rem);
+  }
+  .tiers th, .tiers td {
+    padding: 0.6rem 0.6rem;
+    text-align: left;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .tiers th {
+    font-family: 'Bebas Neue', sans-serif;
+    letter-spacing: 0.2em;
+    color: rgba(255, 255, 255, 0.55);
+    font-weight: normal;
+    font-size: 0.8em;
+  }
+  .tiers td.tname {
+    font-family: 'Bebas Neue', sans-serif;
+    letter-spacing: 0.2em;
+    color: rgba(255, 255, 255, 0.95);
+  }
+  .tiers td.trange { color: rgba(255, 255, 255, 0.78); }
+  .tiers td.tunlock { color: rgba(255, 255, 255, 0.65); }
+
+  /* Credits */
+  .credits {
+    margin-top: 4rem;
+    padding-top: 2rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.14);
+    color: rgba(255, 255, 255, 0.55);
+    font-size: clamp(0.7rem, 1.2vw, 0.78rem);
+    text-align: center;
+    letter-spacing: 0.1em;
+  }
+  .credits a {
+    color: rgba(255, 255, 255, 0.82);
+    text-decoration: none;
+    border-bottom: 1px dotted rgba(255, 255, 255, 0.4);
+    transition: color 0.2s;
+  }
+  .credits a:hover { color: #fff; border-bottom-color: #fff; }
+
+  /* Mobile */
+  @media (max-width: 600px) {
+    body { padding: clamp(20px, 4vw, 32px) 18px; }
+    body {
+      padding-top:    max(20px, calc(env(safe-area-inset-top, 0px) + 24px));
+      padding-bottom: max(20px, calc(env(safe-area-inset-bottom, 0px) + 24px));
+    }
+    .param {
+      grid-template-columns: 14px 96px 1fr;
+      gap: 8px 12px;
+      padding: 0.7rem 0;
+    }
+    .param .dot { width: 8px; height: 8px; }
+    .tiers th, .tiers td { padding: 0.5rem 0.35rem; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<a class="back-link" href="/">← back to your soul</a>
+
+<h1 class="doc-title">SOUL ARCHIVE</h1>
+<p class="doc-sub">6529 identity portrait · manifesto & anatomy</p>
+
+<section>
+  <h2>What is this?</h2>
+  <p class="lede">Every 6529 wallet carries an identity — not chosen, but accrued. Cards held, cards made, memes rated, days on the manifold, reputation earned.</p>
+  <p>Soul Archive reads nine of these signals and projects them as an orbital portrait. A sun, rings, beads, threads, thorns, rays. Each wallet renders differently, deterministically — your soul is your own.</p>
+  <p class="dim">This is not an NFT. It is a mirror.</p>
+</section>
+
+<section>
+  <h2>How it works</h2>
+  <p>Data is pulled live from the 6529 API and refreshed every 10 minutes. As your holdings change — a new meme, a new rank, a new card — your soul evolves.</p>
+  <p>The green dot in the corner signals live data. Click it to refresh manually. Orange means stale (API unreachable); click again to retry.</p>
+  <p class="dim">All visual parameters are derived. Nothing is random. Your wallet address seeds the axis of rotation, the orientation of rare forms, the phase of every shimmer — so no two souls move alike.</p>
+</section>
+
+<section>
+  <h2>Parameter anatomy</h2>
+
+  <div class="param">
+    <span class="dot" style="background:hsl(42,85%,72%)"></span>
+    <span class="pkey">TDH</span>
+    <span class="pdesc">amber sun at the center — your gravitational mass
+      <em>total days held across your consolidated wallets</em></span>
+  </div>
+
+  <div class="param">
+    <span class="dot" style="background:hsl(308,85%,72%)"></span>
+    <span class="pkey">BOOST</span>
+    <span class="pdesc">magenta ring with a gold companion line outside
+      <em>TDH multiplier from Genesis, Gradient, OM, Full Set, and other ecosystem holdings</em></span>
+  </div>
+
+  <div class="param">
+    <span class="dot" style="background:hsl(190,85%,72%)"></span>
+    <span class="pkey">UNIQUE</span>
+    <span class="pdesc">cyan necklace with 484 slots — each slot is a meme
+      <em>filled beads = memes you hold; empty slots = memes you don't</em></span>
+  </div>
+
+  <div class="param">
+    <span class="dot" style="background:hsl(268,85%,72%)"></span>
+    <span class="pkey">NIC</span>
+    <span class="pdesc">lavender ring, turbulent particle field
+      <em>community interaction coefficient — who rates you, and how</em></span>
+  </div>
+
+  <div class="param">
+    <span class="dot" style="background:hsl(110,70%,68%)"></span>
+    <span class="pkey">REP</span>
+    <span class="pdesc">sage rays converging inward from the void
+      <em>reputation given to you by other members — signals arriving</em></span>
+  </div>
+
+  <div class="param">
+    <span class="dot" style="background:hsl(350,85%,72%)"></span>
+    <span class="pkey">LEVEL</span>
+    <span class="pdesc">coral progress arc — fills to level/100
+      <em>collector level in the 6529 ecosystem, 0 to 100</em></span>
+  </div>
+
+  <div class="param">
+    <span class="dot" style="background:hsl(155,85%,65%)"></span>
+    <span class="pkey">FULL SET</span>
+    <span class="pdesc">teal thorny outer shell — pulses every 2 seconds
+      <em>visible only if you hold all 484 Memes cards</em></span>
+  </div>
+
+  <div class="param">
+    <span class="dot" style="background:hsl(48,100%,70%)"></span>
+    <span class="pkey">NAKAMOTO</span>
+    <span class="pdesc">gold bracelet on a tilted great circle — an orbiting ball travels it
+      <em>visible only if you hold The Memes Card #4 (Nakamoto)</em></span>
+  </div>
+
+  <div class="param">
+    <span class="dot" style="background:conic-gradient(#f33,#ff0,#0f0,#0ff,#00f,#f0f,#f33)"></span>
+    <span class="pkey">MEME ARTIST</span>
+    <span class="pdesc">rainbow ring with charms — one charm per card you made
+      <em>visible only if your handle appears as artist on a Memes card</em></span>
+  </div>
+
+  <p class="dim" style="margin-top: 1.2rem;">Wallet consolidation is shown as small moons orbiting the sun — one extra moon per additional wallet in your consolidation.</p>
+</section>
+
+<section>
+  <h2>Tier system</h2>
+  <p class="dim">TDH thresholds. Each tier unlocks a distinct visual signature on top of previous tiers.</p>
+  <table class="tiers">
+    <thead>
+      <tr><th>Tier</th><th>TDH range</th><th>Unlock</th></tr>
+    </thead>
+    <tbody>
+      <tr><td class="tname">ECHO</td>       <td class="trange">0 – 10K</td>       <td class="tunlock">baseline</td></tr>
+      <tr><td class="tname">SIGNAL</td>     <td class="trange">10K – 100K</td>    <td class="tunlock">baseline</td></tr>
+      <tr><td class="tname">EMERGING</td>   <td class="trange">100K – 500K</td>   <td class="tunlock">+ particle density</td></tr>
+      <tr><td class="tname">RESONANCE</td>  <td class="trange">500K – 1M</td>     <td class="tunlock">+ second armillary frame</td></tr>
+      <tr><td class="tname">ANCHOR</td>     <td class="trange">1M – 5M</td>       <td class="tunlock">+ outer prestige ring</td></tr>
+      <tr><td class="tname">PILLAR</td>     <td class="trange">5M – 10M</td>      <td class="tunlock">+ sparkle density</td></tr>
+      <tr><td class="tname">MONUMENT</td>   <td class="trange">10M – 15M</td>     <td class="tunlock">+ softened vignette, aura bleeds out</td></tr>
+      <tr><td class="tname">LEGEND</td>     <td class="trange">15M – 20M</td>     <td class="tunlock">+ cosmic dust drift</td></tr>
+      <tr><td class="tname">PHENOMENON</td> <td class="trange">20M+</td>          <td class="tunlock">+ golden corona flash every 10s</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section>
+  <h2>Soul Name</h2>
+  <p>Every soul carries a two-word name — your <em>6529 soul name</em>. Displayed under your tier.</p>
+  <p>The name is a <strong style="color:#fff">modifier</strong> + an <strong style="color:#fff">archetype</strong>, chosen from your profile's dominant signals. It's deterministic: the same wallet always gets the same name, but no two souls read alike.</p>
+  <p class="dim">Examples: <em style="color:rgba(255,255,255,.75)">Golden Bearer</em> (Nakamoto holder) · <em style="color:rgba(255,255,255,.75)">Rising Maker</em> (early-tier artist) · <em style="color:rgba(255,255,255,.75)">Ancient Pillar</em> (deep TDH, long-held) · <em style="color:rgba(255,255,255,.75)">Luminous Herald</em> (high REP, low TDH) · <em style="color:rgba(255,255,255,.75)">Dormant Drifter</em> (fresh wallet).</p>
+  <p class="dim">Modifiers: Golden (Nakamoto), Blessed (Full Set), Ancient/Deep (top tiers), Steadfast/Rooted (Anchor), Rising, Luminous, Amplified, Quiet, Dormant, Steady.<br>
+  Archetypes: Bearer, Keystone, Founder's Heir (Nakamoto) · Maker, Author, Scribe (Artist) · Completist, Conservator (Full Set) · Anchor, Pillar, Steward (TDH) · Curator, Archivist (Unique) · Herald, Witness (REP) · Voice, Catalyst (NIC) · Adept, Veteran (Level) · Drifter, Wanderer (balanced).</p>
+</section>
+
+<section>
+  <h2>Reading your soul</h2>
+  <p>Hover any ring (or tap on mobile) to see what it is, what value it carries, and what it means.</p>
+  <p>The tier name, memetic score, and TDH appear top-right. The nine base parameters are listed bottom-left; the ring color legend bottom-right.</p>
+  <p class="dim">Scroll with your mouse or drag the side slider to zoom. Axis of rotation is seeded by your wallet — no two souls tilt alike.</p>
+</section>
+
+<section>
+  <h2>FAQ</h2>
+  <p><strong style="color:#fff">Does my soul change over time?</strong><br>
+  Yes. As your TDH, REP, holdings, or artist credits change, your soul evolves with the next refresh.</p>
+  <p><strong style="color:#fff">I'm a Memes artist but no rainbow ring shows up?</strong><br>
+  Your handle in the 6529 profile may differ from the one credited on the card. Wallet-based matching usually catches this; if not, data may be stale in the public API.</p>
+  <p><strong style="color:#fff">Can I export my soul?</strong><br>
+  Yes — PNG (still), GIF (12s loop, Twitter-safe), or MP4 (15s, full quality). Use the EXPORT button.</p>
+  <p><strong style="color:#fff">Is this an NFT or collection?</strong><br>
+  Not today. It's a free tool for the community, a mirror. What comes next is a conversation for the community to have.</p>
+</section>
+
+<div class="credits">
+  made by <a href="https://6529.io/gruffishere" target="_blank" rel="noopener">gruffdzn.eth</a>
+  <br>data · 6529 API
+  <br><br>
+  a love letter to The Memes.
+</div>
+
+</div>
+</body>
+</html>

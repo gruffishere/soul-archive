@@ -1,0 +1,1209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>SOUL ARCHIVE — 6529 Identity Portrait</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  /* Mobile dokunma optimizasyonları — double-tap zoom gecikmesi yok, tap highlight kapalı */
+  button, a, .export-opt, .legend-row {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  body {
+    background: #000;
+    color: #fff;
+    font-family: 'Share Tech Mono', monospace;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  /* ── ENTRY SCREEN (kozmik/minimal) ── */
+  #entry {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    z-index: 100;
+    background: #000;
+    transition: opacity 0.8s ease;
+  }
+
+  #entry.fade-out {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .entry-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(3rem, 10vw, 7rem);
+    letter-spacing: 0.15em;
+    color: #f8f8fa;
+    text-shadow: 0 0 36px rgba(220, 230, 255, 0.10), 0 0 84px rgba(180, 200, 255, 0.05);
+    line-height: 1;
+  }
+
+  .entry-sub {
+    font-size: clamp(0.62rem, 1.5vw, 0.78rem);
+    letter-spacing: 0.35em;
+    color: rgba(255, 255, 255, 0.62);
+    margin-top: 0.5rem;
+    margin-bottom: 3rem;
+    text-transform: uppercase;
+  }
+
+  .input-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    width: min(500px, 90vw);
+  }
+
+  #walletInput {
+    width: 100%;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.40);
+    color: #fff;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: clamp(0.78rem, 2vw, 0.92rem);
+    padding: 0.6rem 0;
+    text-align: center;
+    outline: none;
+    letter-spacing: 0.05em;
+    transition: border-color 0.3s;
+  }
+
+  #walletInput::placeholder { color: rgba(255, 255, 255, 0.40); }
+  #walletInput:focus { border-bottom-color: #fff; }
+
+  #readBtn {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.45);
+    color: rgba(255, 255, 255, 0.92);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.78rem;
+    letter-spacing: 0.25em;
+    padding: 0.72rem 2.6rem;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-transform: uppercase;
+  }
+
+  #readBtn:hover {
+    border-color: #fff;
+    color: #fff;
+  }
+
+  #readBtn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .demo-link {
+    font-size: 0.7rem;
+    letter-spacing: 0.22em;
+    color: rgba(255, 255, 255, 0.62);
+    cursor: pointer;
+    text-decoration: none;
+    transition: color 0.3s;
+    margin-top: 0.5rem;
+  }
+
+  .demo-link:hover { color: #fff; }
+
+  .about-link {
+    font-size: 0.6rem;
+    letter-spacing: 0.22em;
+    color: rgba(255, 255, 255, 0.38);
+    cursor: pointer;
+    text-decoration: none;
+    transition: color 0.3s;
+    margin-top: 0.6rem;
+  }
+  .about-link:hover { color: rgba(255, 255, 255, 0.85); }
+
+  #statusMsg {
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    color: rgba(220, 230, 255, 0.70);
+    min-height: 1.2em;
+    text-align: center;
+  }
+
+  /* ── MANUAL FORM ── */
+  #manualForm {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    width: min(500px, 90vw);
+    margin-top: 1rem;
+  }
+
+  .manual-label {
+    font-size: 0.62rem;
+    letter-spacing: 0.2em;
+    color: rgba(255, 255, 255, 0.55);
+    text-align: left;
+    width: 100%;
+    text-transform: uppercase;
+  }
+
+  .manual-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    width: 100%;
+  }
+
+  .manual-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+
+  .manual-input {
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.30);
+    color: #fff;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.82rem;
+    padding: 0.4rem 0;
+    outline: none;
+    width: 100%;
+    transition: border-color 0.3s;
+  }
+
+  .manual-input:focus { border-bottom-color: #fff; }
+
+  .manual-checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  #submitManual {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.45);
+    color: rgba(255, 255, 255, 0.92);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.22em;
+    padding: 0.62rem 2rem;
+    cursor: pointer;
+    margin-top: 0.5rem;
+    transition: all 0.3s;
+  }
+
+  #submitManual:hover { border-color: #fff; color: #fff; }
+
+  /* ── CANVAS ── */
+  #canvasWrap {
+    position: fixed;
+    inset: 0;
+    display: none;
+  }
+
+  #c1, #c2, #c3 {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* ── HUD ── */
+  #hud {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    display: none;
+    padding: clamp(16px, 3vw, 32px);
+    font-size: clamp(0.55rem, 1.2vw, 0.7rem);
+    letter-spacing: 0.12em;
+  }
+
+  .hud-tl { position: absolute; top: clamp(16px,3vw,32px); left: clamp(16px,3vw,32px); }
+  .hud-tr { position: absolute; top: clamp(16px,3vw,32px); right: clamp(16px,3vw,32px); text-align: right; }
+  .hud-bl { position: absolute; bottom: clamp(16px,3vw,32px); left: clamp(16px,3vw,32px); }
+
+  .hud-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(1.0rem, 2.1vw, 1.3rem);
+    letter-spacing: 0.3em;
+    color: rgba(255, 255, 255, 0.78);
+    display: block;
+  }
+
+  .hud-addr {
+    color: rgba(255, 255, 255, 0.65);
+    margin-top: 0.3rem;
+    display: block;
+  }
+
+  .hud-class {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(1.5rem, 4vw, 2.5rem);
+    letter-spacing: 0.25em;
+    display: block;
+    line-height: 1;
+  }
+
+  /* Soul name — tier isminin altında, cüzdanın kişisel karakteri */
+  .hud-soulname {
+    display: block;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(0.78rem, 1.6vw, 1.0rem);
+    letter-spacing: 0.22em;
+    color: rgba(255, 255, 255, 0.78);
+    margin-top: 0.4rem;
+    line-height: 1;
+  }
+
+  /* Her TIER/NAME satırı — label + değer yan yana, sağa hizalı */
+  .hud-line {
+    display: block;
+    line-height: 1;
+    margin-top: 0.35rem;
+  }
+  .hud-line:first-child { margin-top: 0; }
+
+  .hud-label {
+    display: inline-block;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: clamp(0.55rem, 0.95vw, 0.68rem);
+    letter-spacing: 0.22em;
+    color: rgba(255, 255, 255, 0.42);
+    margin-right: 0.45em;
+    text-transform: uppercase;
+    vertical-align: baseline;
+  }
+
+  /* Live data indicator — tıklanabilir refresh butonu olarak da işlev görür */
+  .hud-live {
+    display: none;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    margin-top: 0.45rem;
+    font-size: clamp(0.48rem, 0.85vw, 0.56rem);
+    letter-spacing: 0.22em;
+    color: rgba(255, 255, 255, 0.55);
+    text-transform: uppercase;
+    cursor: pointer;
+    pointer-events: auto;
+    transition: color 0.2s;
+  }
+  .hud-live:hover { color: #fff; }
+  .hud-live.visible { display: inline-flex; }
+
+  .live-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: rgba(100, 255, 150, 0.92);
+    box-shadow: 0 0 8px rgba(100, 255, 150, 0.55);
+    animation: livePulse 2.2s ease-in-out infinite;
+  }
+  @keyframes livePulse {
+    0%, 100% { opacity: 1;   transform: scale(1);    }
+    50%      { opacity: 0.45;transform: scale(0.75); }
+  }
+  .hud-live.stale .live-dot {
+    background: rgba(255, 180, 80, 0.90);
+    box-shadow: 0 0 8px rgba(255, 180, 80, 0.55);
+    animation: none;
+  }
+  .hud-live.refreshing .live-dot {
+    background: rgba(180, 220, 255, 0.95);
+    box-shadow: 0 0 10px rgba(180, 220, 255, 0.6);
+    animation: livePulse 0.7s ease-in-out infinite;
+  }
+
+  .hud-params {
+    color: rgba(255, 255, 255, 0.55);
+    line-height: 2;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  /* Params listesi — her satır: renk noktası + key + value */
+  .pline {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .pdot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .pdot.rainbow-dot {
+    background: conic-gradient(#ff5a5a, #ffaa30, #ffee50, #60ff80, #40d0ff, #9060ff, #ff60d0, #ff5a5a);
+  }
+  .pdot-pad {
+    width: 6px;
+    height: 6px;
+    flex-shrink: 0;
+    visibility: hidden;
+  }
+
+  #resetBtn {
+    position: fixed;
+    bottom: clamp(14px, 2.5vw, 28px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.78);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.22em;
+    padding: 0.4rem 0.8rem;
+    cursor: pointer;
+    pointer-events: all;
+    display: none;
+    transition: color 0.3s;
+    text-transform: uppercase;
+  }
+
+  #resetBtn:hover { color: #fff; }
+
+  /* Rainbow konturlu ABOUT butonu — conic gradient border, yavaşça döner */
+  @property --rb-angle {
+    syntax: '<angle>';
+    initial-value: 0deg;
+    inherits: false;
+  }
+
+  .rainbow-btn {
+    position: relative;
+    border-color: transparent !important;
+    color: rgba(255, 255, 255, 0.92) !important;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .rainbow-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    padding: 1.3px;
+    background:
+      conic-gradient(from var(--rb-angle, 0deg),
+        #ff5a5a, #ffaa30, #ffee50, #60ff80, #40d0ff, #9060ff, #ff60d0, #ff5a5a);
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+            mask-composite: exclude;
+    animation: rainbow-rotate 14s linear infinite;
+    pointer-events: none;
+    border-radius: inherit;
+  }
+  @keyframes rainbow-rotate {
+    to { --rb-angle: 360deg; }
+  }
+  .rainbow-btn:hover { color: #fff !important; }
+  .rainbow-btn:hover::before { animation-duration: 5s; }
+
+  /* Üst kontroller — perf + export yan yana */
+  #topCtrls {
+    position: fixed;
+    top: clamp(14px, 2.5vw, 28px);
+    left: 50%;
+    transform: translateX(-50%);
+    display: none;
+    flex-direction: row;
+    gap: 10px;
+    z-index: 300;
+  }
+
+  #perfBtn, .export-btn {
+    background: transparent;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.2em;
+    padding: 0.35rem 1rem;
+    cursor: pointer;
+    transition: all 0.3s;
+    white-space: nowrap;  /* Text hep tek satır */
+  }
+
+  #perfBtn {
+    border: 1px solid rgba(255,100,100,0.3);
+    color: rgba(255,100,100,0.5);
+  }
+  #perfBtn:hover { border-color: rgba(255,100,100,0.6); color: rgba(255,120,120,0.8); }
+  #perfBtn.perf-on { border-color: rgba(100,255,150,0.4); color: rgba(100,255,150,0.6); }
+
+  .export-btn {
+    border: 1px solid rgba(180, 200, 255, 0.28);
+    color: rgba(210, 220, 255, 0.55);
+  }
+  .export-btn:hover {
+    border-color: rgba(210, 220, 255, 0.65);
+    color: rgba(240, 245, 255, 0.92);
+  }
+  .export-btn.busy {
+    pointer-events: none;
+    border-color: rgba(210, 220, 255, 0.20);
+    color: rgba(180, 200, 255, 0.85);
+  }
+
+  /* ── Export bar — alttan kayarak açılan seçenek çubuğu ── */
+  #exportBar {
+    position: fixed;
+    bottom: -90px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 10px;
+    padding: 10px 14px;
+    background: rgba(8, 10, 14, 0.88);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    transition: bottom 0.28s ease, opacity 0.2s ease;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 400;
+  }
+  #exportBar.visible {
+    bottom: 70px;
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .export-opt {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    background: transparent;
+    border: 1px solid rgba(210, 220, 255, 0.28);
+    color: rgba(235, 240, 255, 0.78);
+    font-family: 'Share Tech Mono', monospace;
+    padding: 0.55rem 1.3rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    min-width: 96px;
+  }
+  .export-opt:hover {
+    border-color: rgba(235, 240, 255, 0.7);
+    color: #fff;
+    background: rgba(235, 240, 255, 0.05);
+  }
+  .export-opt .opt-label {
+    font-size: 0.82rem;
+    letter-spacing: 0.28em;
+    font-weight: 600;
+  }
+  .export-opt .opt-spec {
+    font-size: 0.54rem;
+    letter-spacing: 0.12em;
+    color: rgba(255, 255, 255, 0.65);
+    text-transform: lowercase;
+  }
+
+  /* ── Zoom slider — sağ kenarda dikey bar ── */
+  #zoomSlider {
+    position: fixed;
+    right: clamp(16px, 2.5vw, 28px);
+    top: 50%;
+    transform: translateY(-50%);
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    width: 28px;
+    padding: 10px 0;
+    z-index: 300;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  #zoomSlider.visible { display: flex; }
+
+  .zs-icon {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    color: rgba(255, 255, 255, 0.70);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.85rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .zs-icon:hover { border-color: rgba(255, 255, 255, 0.55); color: #fff; }
+
+  .zs-track {
+    position: relative;
+    width: 3px;
+    height: 130px;
+    background: rgba(255, 255, 255, 0.14);
+    border-radius: 2px;
+    cursor: pointer;
+  }
+
+  .zs-thumb {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.88);
+    border: 1px solid rgba(0, 0, 0, 0.35);
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.35);
+    cursor: grab;
+    touch-action: none;
+  }
+  .zs-thumb.grabbing { cursor: grabbing; }
+
+  /* Mobile — slider biraz büyür, iconlar tap-friendly */
+  @media (max-width: 600px) {
+    #zoomSlider {
+      right: max(12px, env(safe-area-inset-right, 0px));
+      gap: 8px;
+    }
+    .zs-icon { width: 26px; height: 26px; font-size: 0.95rem; }
+    .zs-track { height: 150px; }
+    .zs-thumb { width: 22px; height: 22px; }
+  }
+
+  /* ── Hover/pin info card (cursor-follow) ── */
+  #hoverCard {
+    position: fixed;
+    left: 0; top: 0;
+    pointer-events: none;
+    background: rgba(8, 10, 14, 0.82);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    padding: 9px 14px 10px;
+    font-family: 'Share Tech Mono', monospace;
+    min-width: 140px;
+    opacity: 0;
+    transform: translate3d(-9999px, -9999px, 0);
+    transition: opacity 0.16s ease;
+    z-index: 500;
+    will-change: transform, opacity;
+  }
+  #hoverCard.visible { opacity: 1; }
+  #hoverCard.pinned  { border-color: rgba(255, 255, 255, 0.38); }
+  #hoverCard .hc-label {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.05rem;
+    letter-spacing: 0.22em;
+    line-height: 1;
+  }
+  #hoverCard .hc-value {
+    color: rgba(255, 255, 255, 0.94);
+    font-size: 0.88rem;
+    letter-spacing: 0.05em;
+    margin-top: 4px;
+  }
+  #hoverCard .hc-desc {
+    color: rgba(255, 255, 255, 0.62);
+    font-size: 0.58rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    margin-top: 5px;
+  }
+
+  /* ── UNBORN ── */
+  #unborn {
+    display: none;
+    position: fixed;
+    inset: 0;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 1rem;
+    background: #000;
+    z-index: 200;
+  }
+
+  .unborn-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(2rem, 8vw, 5rem);
+    letter-spacing: 0.2em;
+    color: rgba(255, 255, 255, 0.55);
+  }
+
+  .unborn-sub {
+    font-size: clamp(0.62rem, 1.5vw, 0.78rem);
+    letter-spacing: 0.25em;
+    color: rgba(255, 255, 255, 0.60);
+    text-align: center;
+  }
+
+  #unbornBack {
+    margin-top: 2rem;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.40);
+    color: rgba(255, 255, 255, 0.82);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.22em;
+    padding: 0.55rem 1.6rem;
+    cursor: pointer;
+    transition: all 0.3s;
+  }
+
+  #unbornBack:hover { border-color: #fff; color: #fff; }
+
+  /* ═══════════════════════════════════════════════════════════ */
+  /*  MOBILE (≤ 600px) — safe-area, büyük tap, sıkı yerleşim     */
+  /* ═══════════════════════════════════════════════════════════ */
+  @media (max-width: 600px) {
+    /* Top kontroller — mobilde HUD etiketlerinin hemen altı */
+    #topCtrls {
+      top: calc(env(safe-area-inset-top, 0px) + 100px);
+      gap: 6px;
+    }
+    #perfBtn, .export-btn {
+      padding: 0.55rem 0.55rem;
+      font-size: 0.50rem;
+      letter-spacing: 0.08em;
+      min-height: 36px;
+    }
+
+    /* Export bar — daha sıkı, safe-area bottom'a saygılı */
+    #exportBar {
+      gap: 6px;
+      padding: 8px 10px;
+    }
+    #exportBar.visible {
+      bottom: calc(70px + env(safe-area-inset-bottom, 0px));
+    }
+    .export-opt {
+      padding: 0.5rem 0.75rem;
+      min-width: 70px;
+      min-height: 44px;
+    }
+    .export-opt .opt-label { font-size: 0.72rem; letter-spacing: 0.18em; }
+    .export-opt .opt-spec  { font-size: 0.46rem; letter-spacing: 0.06em; }
+
+    /* HUD — mobilde daha büyük relative, safe-area'dan kaç */
+    #hud {
+      padding-top:    max(clamp(16px, 3vw, 32px), calc(env(safe-area-inset-top, 0px) + 48px));
+      padding-left:   max(clamp(16px, 3vw, 32px), env(safe-area-inset-left, 16px));
+      padding-right:  max(clamp(16px, 3vw, 32px), env(safe-area-inset-right, 16px));
+      padding-bottom: max(clamp(16px, 3vw, 32px), calc(env(safe-area-inset-bottom, 0px) + 40px));
+      font-size: 0.62rem;
+    }
+    .hud-title { font-size: 0.90rem; letter-spacing: 0.25em; }
+    .hud-addr  { font-size: 0.58rem; }
+    .hud-class    { font-size: 1.6rem; letter-spacing: 0.22em; }
+    .hud-soulname { font-size: 0.82rem; letter-spacing: 0.18em; }
+    .hud-label    { font-size: 0.52rem; letter-spacing: 0.18em; }
+
+    .hud-params { line-height: 1.7; }
+
+    /* Reset button — safe-area'dan kaç, belirgin */
+    #resetBtn {
+      bottom: calc(max(14px, env(safe-area-inset-bottom, 0px)) + 8px);
+      font-size: 0.62rem;
+    }
+
+    /* Entry screen — tight boyutlar */
+    .entry-title { font-size: clamp(2.5rem, 14vw, 4.5rem); }
+    .entry-sub   { font-size: 0.62rem; letter-spacing: 0.22em; margin-bottom: 2rem; }
+
+    #walletInput { font-size: 0.85rem; padding: 0.8rem 0; }
+    #readBtn     { padding: 0.85rem 2rem; min-height: 44px; }
+
+    /* Hover card — mobilde biraz daha büyük */
+    #hoverCard {
+      padding: 10px 14px;
+      min-width: 130px;
+    }
+    #hoverCard .hc-label { font-size: 1.0rem; }
+    #hoverCard .hc-value { font-size: 0.85rem; }
+    #hoverCard .hc-desc  { font-size: 0.52rem; }
+
+    /* Unborn — mobilde sığsın */
+    .unborn-title { font-size: clamp(1.8rem, 10vw, 3.5rem); }
+    .unborn-sub   { font-size: 0.62rem; }
+    #unbornBack   { padding: 0.75rem 1.5rem; min-height: 44px; }
+  }
+
+  /* Çok dar telefonlar (≤ 360px) için ekstra sıkıştırma */
+  @media (max-width: 360px) {
+    #perfBtn, .export-btn {
+      padding: 0.45rem 0.5rem;
+      font-size: 0.48rem;
+    }
+    #exportBar.visible { bottom: calc(60px + env(safe-area-inset-bottom, 0px)); }
+    .export-opt { padding: 0.45rem 0.55rem; min-width: 62px; }
+    .export-opt .opt-label { font-size: 0.68rem; }
+    .export-opt .opt-spec  { font-size: 0.42rem; }
+  }
+
+  /* Touch device: hover state'ler pürüzsüz (hover yok, tap var) */
+  @media (hover: none) {
+    #readBtn:hover, .export-btn:hover, .export-opt:hover,
+    #submitManual:hover, #unbornBack:hover, #resetBtn:hover,
+    .demo-link:hover, #perfBtn:hover {
+      /* Touch cihazda sticky hover state'leri önle */
+      background: inherit;
+      border-color: inherit;
+      color: inherit;
+    }
+  }
+</style>
+</head>
+<body>
+
+<!-- ENTRY SCREEN -->
+<div id="entry">
+  <div class="entry-title">SOUL ARCHIVE</div>
+  <div class="entry-sub">6529 identity portrait / by wallet</div>
+
+  <div class="input-wrap">
+    <input id="walletInput" type="text" placeholder="0x... or ENS name" autocomplete="off" spellcheck="false">
+    <button id="readBtn" onclick="readSoul()">READ SOUL →</button>
+    <div id="statusMsg"></div>
+    <a class="demo-link" onclick="loadDemo()">load demo — punk6529</a>
+    <a class="about-link" href="about.html">about · how it works</a>
+  </div>
+
+  <!-- MANUAL FORM (API başarısız olursa görünür) -->
+  <div id="manualForm">
+    <div class="manual-label" style="margin-top:1.5rem; margin-bottom:0.5rem;">— manual entry —</div>
+    <div class="manual-row">
+      <div class="manual-field">
+        <div class="manual-label">TDH</div>
+        <input class="manual-input" id="m_tdh" type="number" value="0" placeholder="0">
+      </div>
+      <div class="manual-field">
+        <div class="manual-label">xTDH (Boosted)</div>
+        <input class="manual-input" id="m_tdh_boosted" type="number" value="0" placeholder="0">
+      </div>
+      <div class="manual-field">
+        <div class="manual-label">Boost ×</div>
+        <input class="manual-input" id="m_boost" type="number" value="1.0" placeholder="1.0" step="0.01">
+      </div>
+      <div class="manual-field">
+        <div class="manual-label">Level</div>
+        <input class="manual-input" id="m_level" type="number" value="0" placeholder="0–100">
+      </div>
+      <div class="manual-field">
+        <div class="manual-label">Unique Memes</div>
+        <input class="manual-input" id="m_unique" type="number" value="0" placeholder="0–484">
+      </div>
+      <div class="manual-field">
+        <div class="manual-label">NIC</div>
+        <input class="manual-input" id="m_nic" type="number" value="0" placeholder="0">
+      </div>
+      <div class="manual-field">
+        <div class="manual-label">REP</div>
+        <input class="manual-input" id="m_rep" type="number" value="0" placeholder="0">
+      </div>
+      <div class="manual-field">
+        <div class="manual-label">Full Complete Set</div>
+        <div class="manual-checkbox-row">
+          <input type="checkbox" id="m_fullset" style="width:16px;height:16px;accent-color:#fff;">
+          <label for="m_fullset" style="font-size:0.7rem;color:rgba(255, 255, 255, 0.42);">all 484 cards</label>
+        </div>
+      </div>
+      <div class="manual-field">
+        <div class="manual-label">Nakamoto</div>
+        <div class="manual-checkbox-row">
+          <input type="checkbox" id="m_nakamoto" style="width:16px;height:16px;accent-color:#fff;">
+          <label for="m_nakamoto" style="font-size:0.7rem;color:rgba(255, 255, 255, 0.42);">holds card #4</label>
+        </div>
+      </div>
+    </div>
+    <button id="submitManual" onclick="submitManual()">RENDER SOUL →</button>
+  </div>
+</div>
+
+<!-- CANVAS LAYERS -->
+<div id="canvasWrap">
+  <canvas id="c1"></canvas>
+  <canvas id="c2"></canvas>
+  <canvas id="c3"></canvas>
+</div>
+
+<!-- HUD -->
+<div id="hud">
+  <div class="hud-tl">
+    <span class="hud-title">SOUL ARCHIVE</span>
+    <span class="hud-addr" id="hudAddr"></span>
+  </div>
+  <div class="hud-tr">
+    <span class="hud-line">
+      <span class="hud-label">TIER:</span>
+      <span class="hud-class" id="hudClass"></span>
+    </span>
+    <span class="hud-line">
+      <span class="hud-label">NAME:</span>
+      <span class="hud-soulname" id="hudSoulname"></span>
+    </span>
+    <span class="hud-live" id="liveIndicator" onclick="refreshSoulData()" title="click to refresh">
+      <span class="live-dot"></span>
+      <span id="liveText">LIVE</span>
+    </span>
+  </div>
+  <div class="hud-bl">
+    <div class="hud-params" id="hudParams"></div>
+  </div>
+</div>
+
+<button id="resetBtn" onclick="resetAll()">← new reading</button>
+<div id="topCtrls">
+  <button id="perfBtn" onclick="togglePerf()">⚡ PERF MODE</button>
+  <button id="exportBtn" class="export-btn" onclick="toggleExportBar()">⬇ EXPORT</button>
+  <button id="shareXBtn" class="export-btn" onclick="shareSoulToX()">𝕏 SHARE</button>
+  <a id="aboutBtn" class="export-btn rainbow-btn" href="about.html" target="_blank" rel="noopener">ⓘ ABOUT</a>
+</div>
+
+<!-- Export bar — alttan kayarak açılır, PNG/GIF/MP4 seçenekleri -->
+<div id="exportBar">
+  <button class="export-opt" onclick="exportSoulPng()">
+    <span class="opt-label">PNG</span><span class="opt-spec">still, 1080²</span>
+  </button>
+  <button class="export-opt" onclick="exportSoulGif()">
+    <span class="opt-label">GIF</span><span class="opt-spec">540² · 12fps · 12s</span>
+  </button>
+  <button class="export-opt" onclick="exportSoulMp4()">
+    <span class="opt-label">MP4</span><span class="opt-spec">1080² · 30fps · 15s</span>
+  </button>
+</div>
+
+<!-- Zoom slider — sağ kenar, dikey: + üstte, − altta -->
+<div id="zoomSlider">
+  <div class="zs-icon zs-plus" aria-label="zoom in">+</div>
+  <div class="zs-track">
+    <div class="zs-thumb"></div>
+  </div>
+  <div class="zs-icon zs-minus" aria-label="zoom out">−</div>
+</div>
+
+<!-- Hover/pin info card -->
+<div id="hoverCard">
+  <div class="hc-label" id="hcLabel"></div>
+  <div class="hc-value" id="hcValue"></div>
+  <div class="hc-desc"  id="hcDesc"></div>
+</div>
+
+<!-- UNBORN STATE -->
+<div id="unborn">
+  <div class="unborn-title">NO ARCHIVE FOUND</div>
+  <div class="unborn-sub">this soul has not yet entered the memes</div>
+  <button id="unbornBack" onclick="resetAll()">← try another address</button>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+//  SOUL ARCHIVE — Chromatic Orb Visual System v2
+// ═══════════════════════════════════════════════════════
+
+// 9 TDH tier — tier numarası görsel "unlock"ları tetikler (3+'dan itibaren)
+const SOUL_CLASSES = [
+  { name: 'ECHO',       min: 0,          max: 9999,      tier: 1 },
+  { name: 'SIGNAL',     min: 10000,      max: 99999,     tier: 2 },
+  { name: 'EMERGING',   min: 100000,     max: 499999,    tier: 3 },
+  { name: 'RESONANCE',  min: 500000,     max: 999999,    tier: 4 },
+  { name: 'ANCHOR',     min: 1000000,    max: 4999999,   tier: 5 },
+  { name: 'PILLAR',     min: 5000000,    max: 9999999,   tier: 6 },
+  { name: 'MONUMENT',   min: 10000000,   max: 14999999,  tier: 7 },
+  { name: 'LEGEND',     min: 15000000,   max: 19999999,  tier: 8 },
+  { name: 'PHENOMENON', min: 20000000,   max: Infinity,  tier: 9 },
+];
+
+// Her sezon için spektral hue (Sezon 1 → 14)
+const SZN_HUE = [200, 220, 245, 270, 295, 320, 345, 15, 40, 65, 100, 140, 170, 190];
+
+// ═══════════════════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════════════════
+
+function lerp(a, b, t) { return a + (b - a) * Math.max(0, Math.min(1, t)); }
+function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+
+function getSoulClass(tdh) {
+  for (let i = SOUL_CLASSES.length - 1; i >= 0; i--) {
+    if (tdh >= SOUL_CLASSES[i].min) return SOUL_CLASSES[i];
+  }
+  return SOUL_CLASSES[0];
+}
+
+function normalizeTDH(tdh) {
+  if (tdh <= 0) return 0;
+  return clamp(Math.log1p(tdh) / Math.log1p(300_000_000), 0, 1);
+}
+function normalizeRep(rep) {
+  if (rep <= 0) return 0;
+  return clamp(Math.log1p(rep) / Math.log1p(8_000_000), 0, 1);
+}
+function normalizeNic(nic) {
+  if (nic <= 0) return 0;
+  return clamp(Math.log1p(nic) / Math.log1p(2_500_000), 0, 1);
+}
+
+function shortAddr(addr) {
+  if (!addr) return '';
+  if (addr.includes('.eth') || addr.length < 15) return addr;
+  return addr.slice(0, 6) + '...' + addr.slice(-4);
+}
+
+// ═══════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════
+
+let soul    = null;
+let animId  = null;
+let T       = 0;
+let isMobile = window.innerWidth < 600;
+let perfMode = true;
+let texCanvas = null;
+let texCtx    = null;
+
+function togglePerf() {
+  perfMode = !perfMode;
+  const btn = document.getElementById('perfBtn');
+  btn.textContent = perfMode ? '⚡ PERF MODE' : '✦ FULL QUALITY';
+  btn.classList.toggle('perf-on', perfMode);
+  if (soul) buildVisuals();
+}
+
+const c1 = document.getElementById('c1');
+const c2 = document.getElementById('c2');
+const c3 = document.getElementById('c3');
+const ctx1 = c1.getContext('2d');
+const ctx2 = c2.getContext('2d');
+const ctx3 = c3.getContext('2d');
+
+// ═══════════════════════════════════════════════════════
+//  CANVAS BOYUTLANDIRMA
+// ═══════════════════════════════════════════════════════
+
+function resize() {
+  const W = window.innerWidth;
+  const H = window.innerHeight;
+  // Retina / yüksek-DPR ekranlarda internal buffer'ı piksel yoğunluğuyla çarp,
+  // CSS size logical kalsın. iPhone'da blur'ı bu çözer.
+  const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+  window._dpr = dpr;
+  [c1, c2, c3].forEach(c => {
+    c.width  = Math.round(W * dpr);
+    c.height = Math.round(H * dpr);
+    c.style.width  = W + 'px';
+    c.style.height = H + 'px';
+  });
+  // Context'i DPR'a ayarla — çizim logical koordinatlarla yapılır
+  [ctx1, ctx2, ctx3].forEach(ctx => ctx.setTransform(dpr, 0, 0, dpr, 0, 0));
+  isMobile = W < 600;
+  if (soul) buildVisuals();
+}
+
+window.addEventListener('resize', resize);
+resize();
+
+// ═══════════════════════════════════════════════════════
+//  API
+// ═══════════════════════════════════════════════════════
+
+async function readSoul() {
+  const addr = document.getElementById('walletInput').value.trim();
+  if (!addr) return;
+  const btn = document.getElementById('readBtn');
+  const msg = document.getElementById('statusMsg');
+  btn.disabled = true;
+  msg.textContent = 'reading soul...';
+  try {
+    const data = await fetchSoulFromApi(addr);
+    if (data.unborn) {
+      _pushSoulUrl(addr);  // URL'i koru — unborn da paylaşılabilir olsun
+      showUnborn();
+      btn.disabled = false;
+      msg.textContent = '';
+      return;
+    }
+    if (data.error) throw new Error(data.error);
+    msg.textContent = '';
+    btn.disabled = false;
+    _pushSoulUrl(addr);
+    renderSoul(data);
+  } catch (err) {
+    msg.textContent = 'API unavailable — use manual entry below';
+    document.getElementById('manualForm').style.display = 'flex';
+    btn.disabled = false;
+  }
+}
+
+document.getElementById('walletInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') readSoul();
+});
+
+function loadDemo() {
+  renderSoul({
+    address: 'punk6529',
+    tdh: 65906576, level: 100, unique: 484, seasons: 14,
+    genesis: true, sets: 1, nic: 2136784, rep: 3430635
+  });
+}
+
+function submitManual() {
+  // soul-organism.js tarafından override edilir — bu fallback
+  const data = {
+    address:     document.getElementById('walletInput').value.trim() || 'manual',
+    tdh:         parseFloat(document.getElementById('m_tdh').value)         || 0,
+    tdh_boosted: parseFloat(document.getElementById('m_tdh_boosted').value) || 0,
+    boost:       parseFloat(document.getElementById('m_boost').value)       || 1.0,
+    level:       parseFloat(document.getElementById('m_level').value)       || 0,
+    unique:      parseFloat(document.getElementById('m_unique').value)      || 0,
+    fullSet:     document.getElementById('m_fullset').checked,
+    nakamoto:    document.getElementById('m_nakamoto').checked,
+    nic:         parseFloat(document.getElementById('m_nic').value)         || 0,
+    rep:         parseFloat(document.getElementById('m_rep').value)         || 0,
+  };
+  if (data.tdh === 0 && data.unique === 0) { showUnborn(); return; }
+  renderSoul(data);
+}
+
+// ═══════════════════════════════════════════════════════
+//  UNBORN & RESET
+// ═══════════════════════════════════════════════════════
+
+function showUnborn() {
+  document.getElementById('entry').style.display = 'none';
+  document.getElementById('unborn').style.display = 'flex';
+}
+
+function resetAll() {
+  _pushSoulUrl(null);  // URL'i temizle
+  if (typeof clearHoverState === 'function') clearHoverState();
+  if (typeof stopAutoRefresh === 'function') stopAutoRefresh();
+  const liveEl = document.getElementById('liveIndicator');
+  if (liveEl) liveEl.classList.remove('visible', 'stale', 'refreshing');
+  if (animId) { cancelAnimationFrame(animId); animId = null; }
+  soul = null;
+  ctx1.clearRect(0, 0, c1.width, c1.height);
+  ctx2.clearRect(0, 0, c2.width, c2.height);
+  ctx3.clearRect(0, 0, c3.width, c3.height);
+  document.getElementById('canvasWrap').style.display = 'none';
+  document.getElementById('hud').style.display        = 'none';
+  document.getElementById('resetBtn').style.display   = 'none';
+  document.getElementById('topCtrls').style.display   = 'none';
+  document.getElementById('unborn').style.display     = 'none';
+  const zs = document.getElementById('zoomSlider');
+  if (zs) zs.classList.remove('visible');
+  if (typeof resetViewZoom === 'function') resetViewZoom();
+  const entry = document.getElementById('entry');
+  entry.classList.remove('fade-out');
+  entry.style.display = 'flex';
+  entry.style.opacity = '1';
+  document.getElementById('walletInput').value = '';
+  document.getElementById('statusMsg').textContent = '';
+  document.getElementById('manualForm').style.display = 'none';
+}
+
+// ═══════════════════════════════════════════════════════
+//  RENDER SOUL
+// ═══════════════════════════════════════════════════════
+
+function renderSoul(data) {
+  soul = data;
+  const entry = document.getElementById('entry');
+  entry.classList.add('fade-out');
+  setTimeout(() => { entry.style.display = 'none'; }, 800);
+
+  document.getElementById('canvasWrap').style.display = 'block';
+  document.getElementById('hud').style.display        = 'block';
+  document.getElementById('resetBtn').style.display   = 'block';
+  document.getElementById('topCtrls').style.display   = 'flex';
+  const perfBtn = document.getElementById('perfBtn');
+  perfBtn.textContent = perfMode ? '⚡ PERF MODE' : '✦ FULL QUALITY';
+  perfBtn.classList.toggle('perf-on', perfMode);
+
+  buildHUD();
+  buildVisuals();
+  if (animId) cancelAnimationFrame(animId);
+  animate(0);
+}
+
+// ═══════════════════════════════════════════════════════
+//  HUD
+// ═══════════════════════════════════════════════════════
+
+function buildHUD() {
+  const sc = getSoulClass(soul.tdh);
+  document.getElementById('hudAddr').textContent     = shortAddr(soul.address);
+  document.getElementById('hudClass').textContent    = sc.name;
+  document.getElementById('hudClass').style.color    = sc.color || '#fff';
+  // fallback buildHUD — tam işlev soul-organism.js tarafından override edilir
+}
+
+// visual rendering → soul-organism.js
+
+// buildVisuals → soul-organism.js
+
+// ═══════════════════════════════════════════════════════
+//  URL PERSISTENCY — paylaşılır ?addr=... linki
+// ═══════════════════════════════════════════════════════
+let _suppressUrlWrite = false;
+
+function _pushSoulUrl(addr) {
+  if (_suppressUrlWrite) return;
+  const newSearch = addr ? `?addr=${encodeURIComponent(addr)}` : '';
+  if (window.location.search === newSearch) return;
+  history.pushState({ addr: addr || null }, '', window.location.pathname + newSearch);
+}
+
+// Geri / ileri tuşu — URL'den state'i yeniden inşa et (pushState tetiklemeden)
+window.addEventListener('popstate', async () => {
+  _suppressUrlWrite = true;
+  try {
+    const addr = new URLSearchParams(window.location.search).get('addr');
+    if (addr) {
+      document.getElementById('walletInput').value = addr;
+      await readSoul();
+    } else {
+      resetAll();
+    }
+  } finally {
+    _suppressUrlWrite = false;
+  }
+});
+
+// İlk yükleme — URL'de addr varsa otomatik aç
+window.addEventListener('DOMContentLoaded', () => {
+  const addr = new URLSearchParams(window.location.search).get('addr');
+  if (addr) {
+    document.getElementById('walletInput').value = addr;
+    readSoul();
+  }
+});
+
+</script>
+<script src="vendor/gif.js"></script>
+<script src="soul-organism.js"></script>
+</body>
+</html>
