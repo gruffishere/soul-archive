@@ -271,15 +271,15 @@ function generateSoulName(s) {
 
 // Her parametre için renk noktası — orbital ring veya rare form'unun kendi rengi.
 const PARAM_DOT = {
-  'TDH':      'hsl(42, 85%, 72%)',     // amber (solar core + TDH ring)
-  'BOOST':    'hsl(308, 85%, 72%)',    // magenta
-  'UNIQUE':   'hsl(190, 85%, 72%)',    // cyan
-  'NIC':      'hsl(268, 85%, 72%)',    // lavender
-  'REP':      'hsl(110, 70%, 68%)',    // sage
-  'LEVEL':    'hsl(350, 85%, 72%)',    // coral
-  'ARTIST':   'rainbow',               // conic gradient
-  'FULL SET': 'hsl(155, 85%, 70%)',    // teal — thorny shell rengi
-  'NAKAMOTO': 'hsl(48, 100%, 72%)',    // altın — bracelet rengi
+  'TDH':         'hsl(42, 85%, 72%)',     // amber (solar core + TDH ring)
+  'BOOST':       'hsl(308, 85%, 72%)',    // magenta
+  'UNIQUE':      'hsl(190, 85%, 72%)',    // cyan
+  'NIC':         'hsl(268, 85%, 72%)',    // lavender
+  'REP':         'hsl(110, 70%, 68%)',    // sage
+  'LEVEL':       'hsl(350, 85%, 72%)',    // coral
+  'MEME ARTIST': 'rainbow',               // conic gradient
+  'FULL SET':    'hsl(155, 85%, 70%)',    // teal — thorny shell rengi
+  'NAKAMOTO':    'hsl(48, 100%, 72%)',    // altın — bracelet rengi
 };
 function paramDotHtml(k) {
   const c = PARAM_DOT[k];
@@ -297,20 +297,18 @@ function buildHUD() {
   document.getElementById('hudSoulname').textContent = soulName;
   document.getElementById('hudSoulname').style.color = `hsla(${soul.baseHue}, 60%, 82%, 0.85)`;
 
+  const artistN = soul.memeArtistCount || 0;
   const params = [
-    ['TDH',      soul.tdh.toLocaleString()],
-    ['BOOST',    `×${soul.boost.toFixed(2)}`],
-    ['LEVEL',    soul.level],
-    ['UNIQUE',   soul.unique],
-    ['NIC',      soul.nic.toLocaleString()],
-    ['REP',      soul.rep.toLocaleString()],
-    ['FULL SET', soul.fullSet  ? 'YES' : 'NO'],
-    ['NAKAMOTO', soul.nakamoto ? 'YES' : 'NO'],
+    ['TDH',         soul.tdh.toLocaleString()],
+    ['BOOST',       `×${soul.boost.toFixed(2)}`],
+    ['LEVEL',       soul.level],
+    ['UNIQUE',      soul.unique],
+    ['NIC',         soul.nic.toLocaleString()],
+    ['REP',         soul.rep.toLocaleString()],
+    ['FULL SET',    soul.fullSet  ? 'YES' : 'NO'],
+    ['NAKAMOTO',    soul.nakamoto ? 'YES' : 'NO'],
+    ['MEME ARTIST', artistN > 0 ? `${artistN} card${artistN > 1 ? 's' : ''}` : 'NO'],
   ];
-  if (soul.memeArtistCount > 0) {
-    const n = soul.memeArtistCount;
-    params.push(['ARTIST', `${n} card${n > 1 ? 's' : ''}`]);
-  }
   document.getElementById('hudParams').innerHTML = params
     .map(([k, v]) =>
       `<span class="pline">${paramDotHtml(k)}<span>${k} <span style="color:rgba(255,255,255,0.92)">${v}</span></span></span>`)
