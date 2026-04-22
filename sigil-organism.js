@@ -2135,48 +2135,61 @@ function drawMiniSigil(canvas, sigilLike, baseHue) {
 // ══════════════════════════════════════════════════════════
 //  KIN — artists who share the same Sigil Name modifier/archetype
 // ══════════════════════════════════════════════════════════
-// Priority hierarchy:
-//   1) TWIN          — same full Sigil Name
-//   2) SAME MODIFIER — same modifier, different archetype
-//   3) SAME ARCHETYPE — same archetype, different modifier
-//   4) SAME TIER     — same tier if none of the above matched
-// Within each bucket, sorted by TDH proximity (closer sigils first).
-// The user themselves (if they are an artist) is excluded.
+// Three-lens selection: each kin reveals a DIFFERENT relationship to the user.
+//   Slot 1 — MIRROR   : who you are right now. Full-name match if any, else
+//                       the closest overall stat-distance profile.
+//   Slot 2 — AURA     : your shared essence. Same modifier, closest by stats.
+//   Slot 3 — HORIZON  : where you might go. Same archetype at the next tier up
+//                       (fallback: same archetype any higher tier → any archetype →
+//                       closest remaining). If you're already tier 9, HORIZON
+//                       degrades to same-archetype closest.
+// The user themselves (if they are in the pool) is excluded.
 function findKin(userSigil, userHandle) {
   if (!_sigilIndex || !_sigilIndex.profiles) return [];
   const profiles = _sigilIndex.profiles;
 
-  // Compute the user's Sigil Name
   const userSigilName = generateSigilName(userSigil);
   const userMod  = pickSigilModifier(userSigil);
   const userArch = pickSigilArchetype(userSigil);
   const userTier = (typeof getSigilClass === 'function') ? (getSigilClass(userSigil.tdh).tier || 1) : 1;
-  const userTdh  = userSigil.tdh || 0;
   const exclude  = (userHandle || '').toLowerCase();
 
-  // Sort candidates by TDH proximity
+  // Weighted normalized distance across the main stat axes.
+  // TDH weighted highest, then REP, then others. Nakamoto / Full Set / Artist
+  // flag mismatch adds a small penalty so rare-trait peers stay close together.
+  const userTdhN = normalizeTDH(userSigil.tdh || 0);
+  const userRepN = normalizeRep(userSigil.rep || 0);
+  const userNicN = normalizeNic(userSigil.nic || 0);
+  const userLvlN = clamp((userSigil.level || 0) / 100, 0, 1);
+  const userUniN = clamp((userSigil.unique || 0) / 484, 0, 1);
+
   const entries = Object.entries(profiles)
     .filter(([h]) => h !== exclude)
-    .map(([h, p]) => ({
-      handle: h,
-      profile: p,
-      tdhDist: Math.abs((p.stats?.tdh || 0) - userTdh),
-    }));
+    .map(([h, p]) => {
+      const s = p.stats || {};
+      const tdhN = normalizeTDH(s.tdh || 0);
+      const repN = normalizeRep(s.rep || 0);
+      const nicN = normalizeNic(s.nic || 0);
+      const lvlN = clamp((s.level || 0) / 100, 0, 1);
+      const uniN = clamp((s.unique || 0) / 484, 0, 1);
+      let dist =
+        2.0 * Math.abs(tdhN - userTdhN) +
+        1.5 * Math.abs(repN - userRepN) +
+        1.0 * Math.abs(nicN - userNicN) +
+        1.0 * Math.abs(lvlN - userLvlN) +
+        1.0 * Math.abs(uniN - userUniN);
+      // Rare-trait mismatch penalty — so a Nakamoto holder's MIRROR is another
+      // Nakamoto holder, not a non-holder with similar TDH.
+      if (!!userSigil.nakamoto   !== !!s.nakamoto)   dist += 0.6;
+      if (!!userSigil.fullSet    !== !!s.fullSet)    dist += 0.4;
+      if (!!userSigil.memeArtist !== !!s.memeArtist) dist += 0.4;
+      return { handle: h, profile: p, dist, sameName: p.sigilName === userSigilName };
+    });
 
-  const twins   = entries.filter(e => e.profile.sigilName === userSigilName);
-  const modKin  = entries.filter(e => e.profile.modifier === userMod  && e.profile.archetype !== userArch);
-  const archKin = entries.filter(e => e.profile.archetype === userArch && e.profile.modifier !== userMod);
-  const tierKin = entries.filter(e => e.profile.tier === userTier && e.profile.modifier !== userMod && e.profile.archetype !== userArch);
-
-  for (const bucket of [twins, modKin, archKin, tierKin]) {
-    bucket.sort((a, b) => a.tdhDist - b.tdhDist);
-  }
-
-  // Diversity-focused pick: try to take one person from each category first
   const kin = [];
   const used = new Set();
-  const takeFrom = (bucket, reason) => {
-    for (const e of bucket) {
+  const pickFirst = (arr, reason) => {
+    for (const e of arr) {
       if (kin.length >= 3) return;
       if (used.has(e.handle)) continue;
       used.add(e.handle);
@@ -2184,24 +2197,42 @@ function findKin(userSigil, userHandle) {
       return;
     }
   };
-  takeFrom(twins,   'TWIN');
-  takeFrom(modKin,  'SAME MODIFIER');
-  takeFrom(archKin, 'SAME ARCHETYPE');
-  // Fill any remaining slots in priority order
-  while (kin.length < 3) {
-    let added = false;
-    for (const [bucket, reason] of [[twins,'TWIN'],[modKin,'SAME MODIFIER'],[archKin,'SAME ARCHETYPE'],[tierKin,'SAME TIER']]) {
-      for (const e of bucket) {
-        if (used.has(e.handle)) continue;
-        used.add(e.handle);
-        kin.push({ handle: e.handle, profile: e.profile, reason });
-        added = true;
-        break;
-      }
-      if (kin.length >= 3 || added) break;
-    }
-    if (!added) break;
+
+  // Slot 1 — MIRROR: exact name match (if any), otherwise closest overall.
+  const mirrors = entries.filter(e => e.sameName).sort((a, b) => a.dist - b.dist);
+  if (mirrors.length) {
+    pickFirst(mirrors, 'MIRROR');
+  } else {
+    pickFirst(entries.slice().sort((a, b) => a.dist - b.dist), 'MIRROR');
   }
+
+  // Slot 2 — AURA: same modifier, closest.
+  pickFirst(
+    entries.filter(e => !used.has(e.handle) && e.profile.modifier === userMod)
+           .sort((a, b) => a.dist - b.dist),
+    'AURA'
+  );
+
+  // Slot 3 — HORIZON: same archetype, ideally next tier up.
+  //   a) exact next tier
+  //   b) any tier above user
+  //   c) same archetype any tier (might be same tier)
+  //   d) closest remaining (pure fallback)
+  const nextTier = Math.min(9, userTier + 1);
+  const horizonA = entries.filter(e => !used.has(e.handle) && e.profile.archetype === userArch && e.profile.tier === nextTier);
+  const horizonB = entries.filter(e => !used.has(e.handle) && e.profile.archetype === userArch && e.profile.tier >  userTier);
+  const horizonC = entries.filter(e => !used.has(e.handle) && e.profile.archetype === userArch);
+  const horizonD = entries.filter(e => !used.has(e.handle));
+  for (const bucket of [horizonA, horizonB, horizonC, horizonD]) {
+    if (kin.length >= 3) break;
+    const sorted = bucket.slice().sort((a, b) => {
+      // For tier-ascending buckets, prefer lower tier first (closer future)
+      const tierDiff = (a.profile.tier || 0) - (b.profile.tier || 0);
+      return tierDiff !== 0 ? tierDiff : a.dist - b.dist;
+    });
+    pickFirst(sorted, 'HORIZON');
+  }
+
   return kin;
 }
 
