@@ -934,7 +934,7 @@
     letter-spacing: 0.22em;
     margin-right: 0.6em;
   }
-  .kin-legend-row.kin-legend-social .kin-legend-label { color: #ff60d0; }   /* pink */
+  .kin-legend-row.kin-legend-weave  .kin-legend-label { color: #ff60d0; }   /* pink */
   .kin-legend-row.kin-legend-mirror .kin-legend-label { color: #40d0ff; }   /* blue */
   .kin-legend-row.kin-legend-aura   .kin-legend-label { color: #60ff80; }   /* green */
 
@@ -972,6 +972,21 @@
     letter-spacing: 0.06em;
     line-height: 1.6;
     color: rgba(255, 255, 255, 0.62);
+  }
+  .kin-about-body .kin-about-lead {
+    display: block;
+    color: rgba(255, 255, 255, 0.85);
+    font-weight: 700;
+    margin-bottom: 0.4rem;
+  }
+  .kin-hint-weave   { color: #ff60d0; font-weight: 700; }
+  .kin-hint-mirror  { color: #40d0ff; font-weight: 700; }
+  .kin-hint-aura    { color: #60ff80; font-weight: 700; }
+  .kin-about-link {
+    display: inline-flex;
+    margin-top: 0.9rem;
+    pointer-events: auto;
+    font-size: 0.6rem;
   }
 
   .kin-mini {
@@ -1242,24 +1257,25 @@
   </div>
 
   <div class="kin-legend">
-    <div class="kin-legend-row kin-legend-social">
-      <span class="kin-legend-label">SOCIAL</span>the sigil you engage with most on 6529
+    <div class="kin-legend-row kin-legend-weave">
+      <span class="kin-legend-label">WEAVE</span>woven from your reactions, ratings, and rep. an average of the attention returning to you.
     </div>
     <div class="kin-legend-row kin-legend-mirror">
-      <span class="kin-legend-label">MIRROR</span>closest to your numbers across the archive
+      <span class="kin-legend-label">MIRROR</span>your reflection in the archive. tier, stats, and name drawn nearest.
     </div>
     <div class="kin-legend-row kin-legend-aura">
-      <span class="kin-legend-label">AURA</span>your visual twin — rotation, hue, and axis align
+      <span class="kin-legend-label">AURA</span>your light-twin. hue, rotation, and axis turn in time with yours.
     </div>
   </div>
 
   <div class="kin-about">
     <div class="kin-about-title">WHAT IS KIN?</div>
     <div class="kin-about-body">
-      A map of three kindred sigils, measured in data.
-      KIN traces the soul who engages with you most, the one whose numbers mirror yours, and the one whose aura turns with yours —
-      revealing the family your sigil already quietly belongs to.
+      <span class="kin-about-lead">Three kindred sigils, drawn in data.</span>
+      The one most <span class="kin-hint-weave">woven</span> through your attention. The one whose <span class="kin-hint-mirror">numbers</span> mirror yours. The one whose <span class="kin-hint-aura">aura</span> turns in time with yours.
+      A family measured, a belonging revealed.
     </div>
+    <a class="kin-about-link export-btn rainbow-btn" href="about.html" target="_blank" rel="noopener">ⓘ ABOUT</a>
   </div>
 </div>
 

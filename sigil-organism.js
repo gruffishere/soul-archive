@@ -2272,11 +2272,11 @@ function sigilVisualDistance(a, b) {
 }
 
 // Three-lens selection: each kin reveals a DIFFERENT relationship to the user.
-//   Slot 1 — SOCIAL : who engages with you most on 6529 (profile-logs + drops)
-//   Slot 2 — MIRROR : who you are right now (closest overall stat distance)
-//   Slot 3 — AURA   : your visual twin — sigils whose rotation, hue, and axis
-//                     align with yours. Matched on the seed-derived visual
-//                     signature, not stats.
+//   Slot 1 — WEAVE  : most woven through your interactions. A weighted average
+//                     of REP changes, drop ratings, and drop reactions.
+//   Slot 2 — MIRROR : closest overall stat distance. Who you ARE, in numbers.
+//   Slot 3 — AURA   : visual twin. Sigils whose rotation, hue, and axis align
+//                     with yours. Matched on the seed-derived visual signature.
 // The user themselves (if they are in the pool) is excluded.
 async function findKin(userSigil, userHandle) {
   if (!_sigilIndex || !_sigilIndex.profiles) return [];
@@ -2332,12 +2332,11 @@ async function findKin(userSigil, userHandle) {
     }
   };
 
-  // Slot 1 — SOCIAL: top inbound interactor from profile-logs (async).
-  //   This is the only async lens — it hits /api/profile-logs and aggregates.
+  // Slot 1 — WEAVE: top weighted-interaction actor (async; profile-logs + drops).
   const social = await fetchTopSocialInteractor(userHandle);
   if (social && !used.has(social.handle)) {
     used.add(social.handle);
-    kin.push({ handle: social.handle, profile: social.profile, reason: 'SOCIAL' });
+    kin.push({ handle: social.handle, profile: social.profile, reason: 'WEAVE' });
   }
 
   // Slot 2 — MIRROR: closest overall stats (full name match first, else min distance).
@@ -2542,12 +2541,12 @@ async function visitKin(slotIdx) {
 // An orb pulses along each line from the kin card toward the center,
 // fading in at the start and out at the end so the loop doesn't snap.
 const KIN_LINE_COLORS = {
-  SOCIAL: 'rgba(255,  96, 208, 0.55)',  // pink
+  WEAVE:  'rgba(255,  96, 208, 0.55)',  // pink
   MIRROR: 'rgba( 64, 208, 255, 0.55)',  // blue / cyan
   AURA:   'rgba( 96, 255, 128, 0.55)',  // green
 };
 const KIN_ORB_COLORS = {
-  SOCIAL: '#ff60d0',
+  WEAVE:  '#ff60d0',
   MIRROR: '#40d0ff',
   AURA:   '#60ff80',
 };
