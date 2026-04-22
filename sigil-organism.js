@@ -2431,29 +2431,33 @@ async function openKin() {
   await loadSigilIndex();
 
   // Infer the current sigil's handle (from the address via ENS or the sigil-index)
-  // sigil.address may be messy if the API returned "consolidation_display"; we can't
-  // reliably get the profile handle, so we just normalize the address for self-exclusion.
   const userHandleCandidate = inferUserHandle(sigil);
   const kin = await findKin(sigil, userHandleCandidate);
   _lastKin = kin;
 
-  // Center card — the user
-  const userSigilName = generateSigilName(sigil);
-  document.getElementById('kinCenterName').textContent = userSigilName || '—';
-  const countLabel = kin.length === 0
-    ? 'no kin yet in the archive'
-    : `${kin.length} kindred sigil${kin.length > 1 ? 's' : ''}`;
-  document.getElementById('kinCenterSub').textContent = countLabel;
+  // Rainbow title — @handle's KIN (strip .eth, shorten raw 0x addresses)
+  let displayHandle = String(_currentAddr || sigil.address || 'you').split(/\s*[-,]\s*/)[0].trim();
+  if (/^0x[0-9a-f]{40}$/i.test(displayHandle)) displayHandle = shortAddr(displayHandle);
+  else displayHandle = displayHandle.replace(/\.eth$/i, '');
+  const titleEl = document.getElementById('kinTitle');
+  if (titleEl) titleEl.textContent = `@${displayHandle}'s KIN`;
 
-  // Fill the kin cards
+  // Center info — tier label + user's sigil name, rendered beneath the shrunken live sigil
+  const tierName = (typeof getSigilClass === 'function') ? getSigilClass(sigil.tdh).name : '';
+  document.getElementById('kinCenterTier').textContent = tierName ? `TIER: ${tierName}` : '';
+  document.getElementById('kinCenterName').textContent = generateSigilName(sigil) || '—';
+
+  // Fill the kin cards (kept: mini sigil, bond label, name, handle, address)
   const cards = overlay.querySelectorAll('.kin-card');
   cards.forEach((card, i) => {
     const k = kin[i];
     if (!k) {
       card.classList.remove('visible');
+      card.dataset.reason = '';
       return;
     }
     card.classList.add('visible');
+    card.dataset.reason = k.reason;
     card.querySelector('.kin-bond').textContent   = k.reason;
     card.querySelector('.kin-name').textContent   = k.profile.sigilName;
     card.querySelector('.kin-handle').textContent = k.profile.handle;
@@ -2466,15 +2470,21 @@ async function openKin() {
     drawMiniSigil(canvas, k.profile.stats || {}, kinHue);
   });
 
-  // Draw SVG lines from the center to each card
+  // Enter KIN mode: hide HUD + shrink live sigil to center-upper via body class
+  document.body.classList.add('kin-mode');
   overlay.classList.add('visible');
-  // Wait 1 frame to make sure the layout has settled
+  // Force a resize so buildVisuals re-centers the canvas for the new transformed bounds
+  if (typeof resize === 'function') resize();
+  // Wait 1 frame for the layout to settle, then draw the connector lines
   requestAnimationFrame(() => drawKinLines(overlay));
 }
 
 function closeKin() {
   const overlay = document.getElementById('kinOverlay');
   if (overlay) overlay.classList.remove('visible');
+  document.body.classList.remove('kin-mode');
+  // Re-run resize so the live canvas resumes at the normal scale
+  if (typeof resize === 'function') resize();
 }
 
 async function visitKin(slotIdx) {
@@ -2494,7 +2504,15 @@ async function visitKin(slotIdx) {
   }
 }
 
-// SVG lines: center card → each visible kin card's center
+// SVG lines: center → each kin card, tinted per bond type so the three
+// conductor lines read as three different currents (pink/blue/green).
+const KIN_LINE_COLORS = {
+  SOCIAL:  'rgba(255,  96, 208, 0.55)',  // pink
+  MIRROR:  'rgba( 64, 208, 255, 0.55)',  // blue / cyan
+  HORIZON: 'rgba( 96, 255, 128, 0.55)',  // green
+};
+const KIN_LINE_DEFAULT = 'rgba(255, 255, 255, 0.30)';
+
 function drawKinLines(overlay) {
   const svg = overlay.querySelector('.kin-lines');
   if (!svg) return;
@@ -2503,9 +2521,18 @@ function drawKinLines(overlay) {
   svg.setAttribute('viewBox', `0 0 ${rect.width} ${rect.height}`);
   svg.innerHTML = '';
 
-  const center = overlay.querySelector('.kin-center').getBoundingClientRect();
-  const cx = center.left - rect.left + center.width / 2;
-  const cy = center.top  - rect.top  + center.height / 2;
+  // Use the canvas's visual center as the origin, not the text center.
+  // (The live sigil is CSS-scaled + translated; we anchor to the sigil body.)
+  const canvasWrap = document.getElementById('canvasWrap');
+  const wrapRect = canvasWrap ? canvasWrap.getBoundingClientRect() : null;
+  // When body.kin-mode is active, the transform scales + translates canvasWrap;
+  // getBoundingClientRect returns the TRANSFORMED rect, so its center is correct.
+  const cx = wrapRect
+    ? wrapRect.left - rect.left + wrapRect.width / 2
+    : rect.width / 2;
+  const cy = wrapRect
+    ? wrapRect.top  - rect.top  + wrapRect.height / 2
+    : rect.height / 2;
 
   const cards = overlay.querySelectorAll('.kin-card.visible');
   for (const card of cards) {
@@ -2513,13 +2540,16 @@ function drawKinLines(overlay) {
     const tx = cr.left - rect.left + cr.width / 2;
     const ty = cr.top  - rect.top  + cr.height / 2;
 
+    const reason = card.dataset.reason || '';
+    const stroke = KIN_LINE_COLORS[reason] || KIN_LINE_DEFAULT;
+
     const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
     line.setAttribute('x1', cx);
     line.setAttribute('y1', cy);
     line.setAttribute('x2', tx);
     line.setAttribute('y2', ty);
-    line.setAttribute('stroke', 'rgba(255,255,255,0.22)');
-    line.setAttribute('stroke-width', '1');
+    line.setAttribute('stroke', stroke);
+    line.setAttribute('stroke-width', '1.1');
     line.setAttribute('stroke-dasharray', '3 6');
     svg.appendChild(line);
   }

@@ -747,9 +747,9 @@
   #kinOverlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.88);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
+    background: rgba(0, 0, 0, 0.78);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     z-index: 600;
     display: none;
     opacity: 0;
@@ -758,6 +758,18 @@
   #kinOverlay.visible {
     display: block;
     opacity: 1;
+  }
+
+  /* When KIN is open: hide HUD chrome + reset + toolbar; shrink live sigil */
+  body.kin-mode #hud,
+  body.kin-mode #resetBtn,
+  body.kin-mode #topCtrls,
+  body.kin-mode #zoomSlider { display: none !important; }
+  body.kin-mode #canvasWrap {
+    transform: scale(0.30) translateY(-52%);
+    transform-origin: center center;
+    transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+    pointer-events: none;
   }
 
   .kin-close {
@@ -777,6 +789,47 @@
   }
   .kin-close:hover { border-color: #fff; color: #fff; }
 
+  /* Rainbow title — sits where the top toolbar normally lives */
+  @property --kin-title-angle {
+    syntax: '<angle>';
+    initial-value: 0deg;
+    inherits: false;
+  }
+  .kin-title {
+    position: absolute;
+    top: clamp(14px, 2.5vw, 28px);
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: clamp(0.75rem, 1.4vw, 0.95rem);
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    z-index: 3;
+    background: linear-gradient(
+      var(--kin-title-angle, 90deg),
+      #ff5a5a, #ffaa30, #ffee50, #60ff80,
+      #40d0ff, #9060ff, #ff60d0, #ff5a5a
+    );
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: kinTitleShift 14s linear infinite;
+    text-shadow: 0 0 18px rgba(255, 255, 255, 0.18);
+    white-space: nowrap;
+  }
+  @keyframes kinTitleShift {
+    to { --kin-title-angle: 360deg; }
+  }
+  /* Fallback for browsers without @property support — animate background-position */
+  @supports not (background: linear-gradient(var(--x, 0deg), #fff)) {
+    .kin-title { animation: kinTitlePan 10s linear infinite; }
+  }
+  @keyframes kinTitlePan {
+    from { background-position: 0% 0%; }
+    to   { background-position: 200% 0%; }
+  }
+
   .kin-lines {
     position: absolute;
     inset: 0;
@@ -785,59 +838,51 @@
     z-index: 1;
   }
 
-  /* Center card — the user themselves */
+  /* Center info — no frame, just tier + sigil name beneath the shrunken live sigil */
   .kin-center {
     position: absolute;
     top: 50%;
     left: 50%;
-    transform: translate(-50%, -50%);
+    transform: translate(-50%, 10%);
     text-align: center;
     z-index: 2;
-    padding: 1.4rem 1.8rem;
-    min-width: 220px;
-    border: 1px solid rgba(255, 255, 255, 0.22);
-    background: rgba(12, 14, 20, 0.72);
+    pointer-events: none;
   }
-  .kin-center-label {
+  .kin-center-tier {
     font-family: 'Share Tech Mono', monospace;
-    font-size: 0.6rem;
+    font-size: clamp(0.62rem, 1.1vw, 0.78rem);
     letter-spacing: 0.32em;
-    color: rgba(255, 255, 255, 0.55);
+    color: rgba(255, 255, 255, 0.58);
     text-transform: uppercase;
     margin-bottom: 0.6rem;
   }
   .kin-center-name {
     font-family: 'Bebas Neue', sans-serif;
-    font-size: clamp(1.6rem, 3vw, 2.2rem);
-    letter-spacing: 0.18em;
-    line-height: 1;
+    font-size: clamp(1.4rem, 2.4vw, 1.85rem);
+    letter-spacing: 0.20em;
+    line-height: 1.05;
     color: #fff;
-  }
-  .kin-center-sub {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.66rem;
-    letter-spacing: 0.22em;
-    color: rgba(255, 255, 255, 0.65);
-    margin-top: 0.5rem;
+    text-shadow: 0 0 24px rgba(255, 255, 255, 0.12);
   }
 
-  /* Kin cards — 3 slots */
+  /* Kin cards — no frame, pure content */
   .kin-card {
     position: absolute;
     width: clamp(160px, 18vw, 200px);
-    padding: 0.9rem 1rem 1rem;
-    background: rgba(12, 14, 20, 0.72);
-    border: 1px solid rgba(255, 255, 255, 0.16);
+    padding: 0.6rem 0.8rem;
+    background: transparent;
+    border: none;
     cursor: pointer;
-    transition: border-color 0.2s, transform 0.2s;
+    transition: transform 0.2s, filter 0.2s;
     text-align: center;
     z-index: 2;
     display: none;  /* JS makes it visible when kin exists */
+    filter: brightness(1);
   }
   .kin-card.visible { display: block; }
   .kin-card:hover {
-    border-color: rgba(255, 255, 255, 0.55);
-    transform: scale(1.03);
+    transform: scale(1.04);
+    filter: brightness(1.25);
   }
 
   .kin-slot-left {
@@ -854,8 +899,36 @@
     transform: translateX(-50%);
   }
   .kin-slot-bottom:hover {
-    transform: translateX(-50%) scale(1.03);
+    transform: translateX(-50%) scale(1.04);
   }
+
+  /* Legend — bottom-left, explains each bond type */
+  .kin-legend {
+    position: absolute;
+    left: clamp(16px, 2.5vw, 32px);
+    bottom: clamp(20px, 4vh, 40px);
+    z-index: 3;
+    max-width: clamp(240px, 26vw, 340px);
+    pointer-events: none;
+  }
+  .kin-legend-row {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: clamp(0.58rem, 1.05vw, 0.7rem);
+    letter-spacing: 0.08em;
+    color: rgba(255, 255, 255, 0.62);
+    line-height: 1.55;
+    margin-bottom: 0.4rem;
+  }
+  .kin-legend-row:last-child { margin-bottom: 0; }
+  .kin-legend-label {
+    display: inline-block;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    margin-right: 0.6em;
+  }
+  .kin-legend-row.kin-legend-social .kin-legend-label { color: #ff60d0; }   /* pink */
+  .kin-legend-row.kin-legend-mirror .kin-legend-label { color: #40d0ff; }   /* blue */
+  .kin-legend-row.kin-legend-horizon .kin-legend-label { color: #60ff80; }  /* green */
 
   .kin-mini {
     display: block;
@@ -897,13 +970,21 @@
 
   /* Kin mobile (≤ 600px) — vertical stack */
   @media (max-width: 600px) {
+    body.kin-mode #canvasWrap {
+      transform: scale(0.28) translateY(-120%);
+    }
+    .kin-title {
+      top: 1rem;
+      font-size: 0.6rem;
+      letter-spacing: 0.22em;
+    }
     .kin-center {
-      top: 1.5rem;
-      left: 50%;
-      transform: translateX(-50%);
-      padding: 0.9rem 1.2rem;
-      min-width: 0;
-      width: calc(100% - 2.5rem);
+      top: auto;
+      bottom: auto;
+      position: static;
+      transform: none;
+      margin: 0 auto 1rem;
+      padding-top: 2.5rem;
     }
     .kin-card {
       position: static;
@@ -916,11 +997,17 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 8rem 1rem 2rem;
+      padding: 5rem 1rem 2rem;
       overflow-y: auto;
     }
     .kin-slot-left, .kin-slot-right, .kin-slot-bottom { top: auto; bottom: auto; left: auto; right: auto; }
     .kin-lines { display: none; }  /* hide the lines on mobile */
+    .kin-legend {
+      position: static;
+      max-width: 100%;
+      margin-top: 1rem;
+      pointer-events: auto;
+    }
   }
 
   /* Touch device: keep hover states clean (no hover, only tap) */
@@ -1073,12 +1160,12 @@
 <!-- KIN OVERLAY — kindred sigils that share the same Sigil Name modifier/archetype -->
 <div id="kinOverlay">
   <button class="kin-close" onclick="closeKin()" aria-label="close">×</button>
+  <div class="kin-title" id="kinTitle"></div>
   <svg class="kin-lines" aria-hidden="true"></svg>
 
   <div class="kin-center" id="kinCenter">
-    <div class="kin-center-label">◎ KIN</div>
+    <div class="kin-center-tier" id="kinCenterTier"></div>
     <div class="kin-center-name" id="kinCenterName"></div>
-    <div class="kin-center-sub" id="kinCenterSub">—</div>
   </div>
 
   <div class="kin-card kin-slot-left" data-slot="0" onclick="visitKin(0)">
@@ -1101,6 +1188,18 @@
     <div class="kin-name"></div>
     <div class="kin-handle"></div>
     <div class="kin-addr"></div>
+  </div>
+
+  <div class="kin-legend">
+    <div class="kin-legend-row kin-legend-social">
+      <span class="kin-legend-label">SOCIAL</span>the sigil you engage with most on 6529
+    </div>
+    <div class="kin-legend-row kin-legend-mirror">
+      <span class="kin-legend-label">MIRROR</span>closest to your numbers across the archive
+    </div>
+    <div class="kin-legend-row kin-legend-horizon">
+      <span class="kin-legend-label">HORIZON</span>same path, one tier ahead — where you might go
+    </div>
   </div>
 </div>
 
