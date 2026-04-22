@@ -2135,16 +2135,55 @@ function drawMiniSigil(canvas, sigilLike, baseHue) {
 // ══════════════════════════════════════════════════════════
 //  KIN — artists who share the same Sigil Name modifier/archetype
 // ══════════════════════════════════════════════════════════
+// ── SOCIAL KIN — who interacts with you most on 6529 ────────────
+// Fetches /api/profile-logs?target={handle} (paginated), counts unique
+// actors, returns the top interactor whose profile exists in our pool.
+// Cached per-handle within the session to avoid re-fetching on repeat KIN opens.
+const _socialCache = {};
+async function fetchTopSocialInteractor(userHandle) {
+  if (!userHandle) return null;
+  const key = String(userHandle).toLowerCase();
+  if (_socialCache[key]) return _socialCache[key];
+
+  const counts = {};
+  const selfKeys = new Set([key]);  // exclude the user themselves
+  // Also exclude their own handle variants (sigil.handle might be different)
+  try {
+    for (let page = 1; page <= 3; page++) {
+      const r = await fetch(`${API_BASE}/api/profile-logs?target=${encodeURIComponent(userHandle)}&page_size=100&page=${page}`);
+      if (!r.ok) break;
+      const j = await r.json();
+      for (const l of (j.data || [])) {
+        const h = String(l.profile_handle || '').toLowerCase();
+        if (h && !selfKeys.has(h)) counts[h] = (counts[h] || 0) + 1;
+      }
+      if (!j.next) break;
+    }
+  } catch (err) {
+    console.warn('[social-kin] fetch failed:', err.message);
+  }
+
+  // Pick the top interactor whose handle appears in our profiles pool
+  const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  let result = null;
+  for (const [handle, count] of sorted) {
+    const profile = _sigilIndex?.profiles?.[handle];
+    if (profile) {
+      result = { handle, profile, count };
+      break;
+    }
+  }
+  _socialCache[key] = result;
+  return result;
+}
+
 // Three-lens selection: each kin reveals a DIFFERENT relationship to the user.
-//   Slot 1 — MIRROR   : who you are right now. Full-name match if any, else
-//                       the closest overall stat-distance profile.
-//   Slot 2 — AURA     : your shared essence. Same modifier, closest by stats.
-//   Slot 3 — HORIZON  : where you might go. Same archetype at the next tier up
-//                       (fallback: same archetype any higher tier → any archetype →
-//                       closest remaining). If you're already tier 9, HORIZON
-//                       degrades to same-archetype closest.
+//   Slot 1 — SOCIAL   : who interacts with you most on 6529 (profile-logs agg)
+//   Slot 2 — MIRROR   : who you are right now (closest overall stat distance)
+//   Slot 3 — HORIZON  : where you might go (same archetype, next tier up).
+//                       [Placeholder — Step 2b will replace with SIGIL signature match.]
 // The user themselves (if they are in the pool) is excluded.
-function findKin(userSigil, userHandle) {
+async function findKin(userSigil, userHandle) {
   if (!_sigilIndex || !_sigilIndex.profiles) return [];
   const profiles = _sigilIndex.profiles;
 
@@ -2198,20 +2237,22 @@ function findKin(userSigil, userHandle) {
     }
   };
 
-  // Slot 1 — MIRROR: exact name match (if any), otherwise closest overall.
-  const mirrors = entries.filter(e => e.sameName).sort((a, b) => a.dist - b.dist);
+  // Slot 1 — SOCIAL: top inbound interactor from profile-logs (async).
+  //   This is the only async lens — it hits /api/profile-logs and aggregates.
+  const social = await fetchTopSocialInteractor(userHandle);
+  if (social && !used.has(social.handle)) {
+    used.add(social.handle);
+    kin.push({ handle: social.handle, profile: social.profile, reason: 'SOCIAL' });
+  }
+
+  // Slot 2 — MIRROR: closest overall stats (full name match first, else min distance).
+  const mirrors = entries.filter(e => !used.has(e.handle) && e.sameName)
+                         .sort((a, b) => a.dist - b.dist);
   if (mirrors.length) {
     pickFirst(mirrors, 'MIRROR');
   } else {
-    pickFirst(entries.slice().sort((a, b) => a.dist - b.dist), 'MIRROR');
+    pickFirst(entries.filter(e => !used.has(e.handle)).sort((a, b) => a.dist - b.dist), 'MIRROR');
   }
-
-  // Slot 2 — AURA: same modifier, closest.
-  pickFirst(
-    entries.filter(e => !used.has(e.handle) && e.profile.modifier === userMod)
-           .sort((a, b) => a.dist - b.dist),
-    'AURA'
-  );
 
   // Slot 3 — HORIZON: same archetype, ideally next tier up.
   //   a) exact next tier
@@ -2336,7 +2377,7 @@ async function openKin() {
   // sigil.address may be messy if the API returned "consolidation_display"; we can't
   // reliably get the profile handle, so we just normalize the address for self-exclusion.
   const userHandleCandidate = inferUserHandle(sigil);
-  const kin = findKin(sigil, userHandleCandidate);
+  const kin = await findKin(sigil, userHandleCandidate);
   _lastKin = kin;
 
   // Center card — the user
