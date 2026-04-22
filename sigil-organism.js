@@ -2068,17 +2068,19 @@ function drawMiniSigil(canvas, sigilLike, baseHue) {
   const nicN   = normalizeNic(sigilLike.nic || 0);
   const levelN = clamp((sigilLike.level || 0) / 100, 0, 1);
 
-  // Background
-  ctx.fillStyle = '#000';
-  ctx.fillRect(0, 0, W, H);
-
-  // Soft aura
-  const aura = ctx.createRadialGradient(cx, cy, 0, cx, cy, R * 1.25);
-  aura.addColorStop(0,   `hsla(${hue}, 70%, 18%, 0.70)`);
-  aura.addColorStop(0.6, `hsla(${hue}, 60%, 10%, 0.25)`);
-  aura.addColorStop(1,   'rgba(0,0,0,0)');
+  // Transparent background — the kin card sits over the live sigil in KIN mode,
+  // so we clear instead of filling. A subtle light aura (lighter-blend) adds a
+  // soft halo without introducing a dark rectangle.
+  ctx.clearRect(0, 0, W, H);
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  const aura = ctx.createRadialGradient(cx, cy, 0, cx, cy, R * 1.15);
+  aura.addColorStop(0,    `hsla(${hue}, 90%, 55%, 0.28)`);
+  aura.addColorStop(0.55, `hsla(${hue}, 85%, 45%, 0.12)`);
+  aura.addColorStop(1,    'rgba(0,0,0,0)');
   ctx.fillStyle = aura;
   ctx.fillRect(0, 0, W, H);
+  ctx.restore();
 
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
