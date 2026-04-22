@@ -747,18 +747,21 @@
   #kinOverlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.78);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    background: transparent;       /* canvas shows through cleanly */
     z-index: 600;
     display: none;
     opacity: 0;
     transition: opacity 0.3s ease;
+    pointer-events: none;          /* let the canvas breathe; re-enable on children */
   }
   #kinOverlay.visible {
     display: block;
     opacity: 1;
   }
+  /* Re-enable pointer events on interactive children */
+  #kinOverlay .kin-close,
+  #kinOverlay .kin-card,
+  #kinOverlay .kin-legend { pointer-events: auto; }
 
   /* When KIN is open: hide HUD chrome + reset + toolbar; shrink live sigil */
   body.kin-mode #hud,
@@ -766,8 +769,8 @@
   body.kin-mode #topCtrls,
   body.kin-mode #zoomSlider { display: none !important; }
   body.kin-mode #canvasWrap {
-    transform: scale(0.30) translateY(-52%);
-    transform-origin: center center;
+    transform: translateY(-23vh) scale(0.30);
+    transform-origin: 50% 50%;
     transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
     pointer-events: none;
   }
@@ -971,7 +974,7 @@
   /* Kin mobile (≤ 600px) — vertical stack */
   @media (max-width: 600px) {
     body.kin-mode #canvasWrap {
-      transform: scale(0.28) translateY(-120%);
+      transform: translateY(-30vh) scale(0.28);
     }
     .kin-title {
       top: 1rem;
