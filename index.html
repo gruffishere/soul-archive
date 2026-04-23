@@ -1087,6 +1087,255 @@
       color: inherit;
     }
   }
+
+  /* ═══════════════════════════════════════════════════════════ */
+  /*  ARCHIVE OVERLAY — shared table of every sigil ever read     */
+  /* ═══════════════════════════════════════════════════════════ */
+  #archiveOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.96);
+    z-index: 700;
+    display: none;
+    flex-direction: column;
+    padding: clamp(20px, 3vw, 40px);
+    padding-top: max(clamp(20px, 3vw, 40px), calc(env(safe-area-inset-top, 0px) + 24px));
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  #archiveOverlay.visible {
+    display: flex;
+    opacity: 1;
+  }
+  body.archive-mode #topCtrls,
+  body.archive-mode #zoomSlider,
+  body.archive-mode #resetBtn,
+  body.archive-mode #exportBar { display: none !important; }
+
+  .archive-close {
+    position: absolute;
+    top: clamp(14px, 2.5vw, 24px);
+    right: clamp(14px, 2.5vw, 24px);
+    width: 36px; height: 36px;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    color: rgba(255, 255, 255, 0.78);
+    font-size: 1.4rem;
+    line-height: 1;
+    cursor: pointer;
+    border-radius: 50%;
+    transition: all 0.2s;
+    z-index: 3;
+    font-family: 'Share Tech Mono', monospace;
+  }
+  .archive-close:hover { border-color: #fff; color: #fff; }
+
+  .archive-header {
+    text-align: center;
+    margin-bottom: clamp(1rem, 2.5vh, 1.8rem);
+    padding: 0 clamp(40px, 5vw, 60px);
+  }
+  .archive-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(1.5rem, 3.5vw, 2.4rem);
+    letter-spacing: 0.22em;
+    color: #fff;
+    line-height: 1;
+  }
+  .archive-sub {
+    font-size: clamp(0.6rem, 1.15vw, 0.72rem);
+    letter-spacing: 0.26em;
+    color: rgba(255, 255, 255, 0.52);
+    text-transform: uppercase;
+    margin-top: 0.6rem;
+  }
+
+  .archive-controls {
+    display: flex;
+    gap: 0.8rem;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+  }
+  .archive-search {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    color: #fff;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.78rem;
+    letter-spacing: 0.05em;
+    padding: 0.55rem 0.9rem;
+    outline: none;
+    min-width: 240px;
+    transition: border-color 0.2s;
+  }
+  .archive-search:focus { border-color: rgba(255, 255, 255, 0.6); }
+  .archive-search::placeholder { color: rgba(255, 255, 255, 0.38); }
+
+  .archive-sort { display: flex; gap: 0.3rem; }
+  .archive-sort-btn {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    color: rgba(255, 255, 255, 0.7);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.18em;
+    padding: 0.55rem 0.95rem;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.15s;
+  }
+  .archive-sort-btn:hover { border-color: rgba(255, 255, 255, 0.5); color: #fff; }
+  .archive-sort-btn.active {
+    border-color: rgba(255, 255, 255, 0.85);
+    color: #fff;
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  .archive-table-wrap {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: auto;
+    padding: 0 clamp(4px, 2vw, 20px);
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+  }
+  .archive-table-wrap::-webkit-scrollbar { width: 6px; height: 6px; }
+  .archive-table-wrap::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 3px; }
+
+  .archive-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: clamp(0.72rem, 1.1vw, 0.8rem);
+    min-width: 720px;
+  }
+  .archive-table thead th {
+    position: sticky;
+    top: 0;
+    background: rgba(0, 0, 0, 0.96);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    font-family: 'Bebas Neue', sans-serif;
+    font-weight: normal;
+    letter-spacing: 0.22em;
+    font-size: 0.72rem;
+    color: rgba(255, 255, 255, 0.55);
+    text-align: left;
+    padding: 0.65rem 0.7rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+    text-transform: uppercase;
+    z-index: 1;
+  }
+  .archive-table thead th.ar-reads,
+  .archive-table thead th.ar-last { text-align: right; }
+  .archive-table tbody tr {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    cursor: pointer;
+    transition: background 0.12s;
+  }
+  .archive-table tbody tr:hover { background: rgba(255, 255, 255, 0.04); }
+  .archive-table tbody td {
+    padding: 0.62rem 0.7rem;
+    color: rgba(255, 255, 255, 0.85);
+    vertical-align: middle;
+  }
+  .archive-table .ar-idx {
+    color: rgba(255, 255, 255, 0.32);
+    width: 46px;
+    font-variant-numeric: tabular-nums;
+  }
+  .archive-table .ar-handle { color: #fff; }
+  .archive-table .ar-wallet code {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.92em;
+    letter-spacing: 0.02em;
+    font-family: 'Share Tech Mono', monospace;
+  }
+  .archive-table .ar-name {
+    font-family: 'Bebas Neue', sans-serif;
+    letter-spacing: 0.1em;
+    color: rgba(255, 255, 255, 0.92);
+    font-size: 1.05em;
+  }
+  .archive-table .ar-tier {
+    font-family: 'Bebas Neue', sans-serif;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    font-size: 0.92em;
+  }
+  .archive-table .ar-reads {
+    font-variant-numeric: tabular-nums;
+    color: rgba(255, 255, 255, 0.78);
+    text-align: right;
+    width: 80px;
+  }
+  .archive-table .ar-last {
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 0.9em;
+    text-align: right;
+    width: 110px;
+  }
+  .archive-table .ar-dim { color: rgba(255, 255, 255, 0.32); }
+
+  /* Tier color accents */
+  .archive-table .tier-phenomenon { color: hsl(48, 100%, 75%); }
+  .archive-table .tier-legend     { color: hsl(45, 85%, 72%); }
+  .archive-table .tier-monument   { color: hsl(40, 72%, 72%); }
+  .archive-table .tier-pillar     { color: hsl(32, 62%, 72%); }
+  .archive-table .tier-anchor     { color: hsl(25, 55%, 72%); }
+  .archive-table .tier-resonance  { color: hsl(200, 60%, 74%); }
+  .archive-table .tier-emerging   { color: hsl(220, 50%, 74%); }
+  .archive-table .tier-signal     { color: rgba(255, 255, 255, 0.75); }
+  .archive-table .tier-echo       { color: rgba(255, 255, 255, 0.55); }
+  .archive-table .tier-unborn     { color: rgba(255, 255, 255, 0.38); }
+
+  .archive-loading td {
+    text-align: center;
+    padding: 2.5rem;
+    color: rgba(255, 255, 255, 0.48);
+    letter-spacing: 0.18em;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+  }
+
+  .archive-empty {
+    display: none;
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.42);
+    font-size: 0.85rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    padding: 3rem 1rem;
+    text-align: center;
+  }
+
+  .archive-stats {
+    text-align: center;
+    padding: 1rem 0 0.3rem;
+    color: rgba(255, 255, 255, 0.42);
+    font-size: 0.68rem;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+  }
+
+  .archive-note {
+    text-align: center;
+    color: rgba(255, 255, 255, 0.32);
+    font-size: 0.58rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-top: 0.3rem;
+  }
+
+  @media (max-width: 700px) {
+    .archive-table { min-width: 560px; font-size: 0.68rem; }
+    .archive-search { min-width: 160px; font-size: 0.72rem; }
+    .archive-controls { gap: 0.5rem; }
+    .archive-sort-btn { padding: 0.5rem 0.75rem; font-size: 0.66rem; }
+  }
 </style>
 </head>
 <body>
@@ -1190,6 +1439,7 @@
   <button id="perfBtn" onclick="togglePerf()">⚡ PERF MODE</button>
   <button id="exportBtn" class="export-btn" onclick="toggleExportBar()">⬇ EXPORT</button>
   <button id="shareXBtn" class="export-btn" onclick="shareSigilToX()">𝕏 SHARE</button>
+  <button id="archiveBtn" class="export-btn" onclick="openArchive()">◈ ARCHIVE</button>
   <button id="kinBtn" class="export-btn" onclick="openKin()">◎ KIN</button>
   <a id="aboutBtn" class="export-btn rainbow-btn" href="about.html" target="_blank" rel="noopener">ⓘ ABOUT</a>
 </div>
@@ -1277,6 +1527,42 @@
     </div>
     <a class="kin-about-link export-btn rainbow-btn" href="about.html" target="_blank" rel="noopener">ⓘ ABOUT</a>
   </div>
+</div>
+
+<!-- ARCHIVE OVERLAY — every sigil ever read, by anyone, anywhere -->
+<div id="archiveOverlay">
+  <button class="archive-close" onclick="closeArchive()" aria-label="close">×</button>
+  <div class="archive-header">
+    <div class="archive-title">THE ARCHIVE</div>
+    <div class="archive-sub">every sigil ever read, by anyone, anywhere</div>
+  </div>
+  <div class="archive-controls">
+    <input class="archive-search" type="text" placeholder="search handle, wallet, or name…" oninput="archiveSearchInput(this)">
+    <div class="archive-sort">
+      <button class="archive-sort-btn active" data-sort="recent"  onclick="setArchiveSort(this)">Recent</button>
+      <button class="archive-sort-btn"        data-sort="popular" onclick="setArchiveSort(this)">Most read</button>
+      <button class="archive-sort-btn"        data-sort="newest"  onclick="setArchiveSort(this)">First seen</button>
+    </div>
+  </div>
+  <div class="archive-table-wrap">
+    <table class="archive-table">
+      <thead>
+        <tr>
+          <th class="ar-idx">#</th>
+          <th>Handle</th>
+          <th>Wallet</th>
+          <th>Sigil Name</th>
+          <th>Tier</th>
+          <th class="ar-reads">Reads</th>
+          <th class="ar-last">Last seen</th>
+        </tr>
+      </thead>
+      <tbody id="archiveBody"></tbody>
+    </table>
+    <div class="archive-empty" id="archiveEmpty">no sigils read yet. be the first.</div>
+  </div>
+  <div class="archive-stats" id="archiveStats"></div>
+  <div class="archive-note">this list lives on a public table and is shared by everyone</div>
 </div>
 
 <!-- UNBORN STATE -->
@@ -1564,5 +1850,6 @@ window.addEventListener('DOMContentLoaded', () => {
 </script>
 <script src="vendor/gif.js"></script>
 <script src="sigil-organism.js"></script>
+<script src="sigil-archive.js"></script>
 </body>
 </html>

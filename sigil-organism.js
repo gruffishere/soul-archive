@@ -98,7 +98,10 @@ function enrichSigil(data) {
   next.memeArtistCount = Math.max(0, Number(next.memeArtistCount) || 0);
   next.memeArtist      = next.memeArtistCount > 0 || Boolean(next.memeArtist);
   next.walletCount     = Math.max(1, Number(next.walletCount) || 1);
-  next.baseHue         = sigilHue(next.address);
+  // baseHue is derived from primary_wallet (the canonical owner address), so the same
+  // person gets the same color everywhere: HUD, archive, and about examples stay in sync.
+  // Falls back to the display address for manual-entry sigils that have no primary_wallet.
+  next.baseHue         = sigilHue(next.primary_wallet || next.address);
   return next;
 }
 
@@ -367,7 +370,16 @@ function buildHUD() {
     .map(([k, v]) =>
       `<span class="pline">${paramDotHtml(k)}<span>${k} <span style="color:rgba(255,255,255,0.92)">${v}</span></span></span>`)
     .join('');
+
+  // Log this read into the shared archive (fire-and-forget, 2s per-wallet rate-limited on the server).
+  // Skipped when called from the auto-refresh path, so passive polling doesn't inflate read_count.
+  if (!_skipArchiveRecord && typeof recordSigilRead === 'function') {
+    try { recordSigilRead(sigil, sigilName, sc.name); } catch (_) { /* silent */ }
+  }
 }
+
+// Guard flag: when true, buildHUD skips recordSigilRead. Set by refreshSigilData around its buildHUD call.
+let _skipArchiveRecord = false;
 
 // ══════════════════════════════════════════════════════════
 //  NOISE + CURL FIELD ENGINE
@@ -2044,6 +2056,8 @@ async function fetchSigilFromApi(addr) {
     primary_wallet:  profileData?.profile?.primary_wallet
                        || (Array.isArray(tdhData.wallets) ? tdhData.wallets[0] : null)
                        || null,
+    // handle is surfaced so the shared archive (sigil-archive.js) can label rows
+    handle:          profileData?.profile?.handle || null,
   };
 }
 
@@ -2422,8 +2436,11 @@ async function refreshSigilData() {
       }
     }
 
-    // Refresh HUD text
-    if (typeof buildHUD === 'function') buildHUD();
+    // Refresh HUD text (suppress archive write — passive refresh shouldn't inflate read_count)
+    if (typeof buildHUD === 'function') {
+      _skipArchiveRecord = true;
+      try { buildHUD(); } finally { _skipArchiveRecord = false; }
+    }
 
     _lastFetchedAt = Date.now();
     if (indicator) indicator.classList.remove('refreshing');
