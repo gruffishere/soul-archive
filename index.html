@@ -771,10 +771,12 @@
   body.kin-mode #canvasWrap {
     transform: scale(0.42);
     transform-origin: 50% 50%;
-    transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+    transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.4s, filter 0.4s;
     pointer-events: none;
-    /* Lift visibility — low-TDH sigils get compressed hard by the scale; brightness + drop-shadow halo bring the form back */
-    filter: brightness(1.35) contrast(1.08) drop-shadow(0 0 24px rgba(255, 255, 255, 0.18));
+    /* Gentle background halo — the KIN cards become the focus; the live sigil sits
+       behind as a softened echo of the user's identity. */
+    opacity: 0.55;
+    filter: blur(4px) brightness(1.25) contrast(1.05) drop-shadow(0 0 26px rgba(255, 255, 255, 0.22));
   }
 
   .kin-close {
@@ -1887,6 +1889,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
 </script>
 <script src="vendor/gif.js"></script>
+<script src="vendor/mp4-muxer.js"></script>
 <script src="sigil-organism.js"></script>
 <script src="sigil-archive.js"></script>
 </body>

@@ -2891,59 +2891,54 @@ async function exportSigilGif() {
   }
 }
 
-// ── MP4 EXPORT — full quality from the site (native pixels, 60fps, 16Mbps) ──
-// MediaRecorder API. Falls back to WebM when MP4 isn't supported (Firefox is usually WebM).
-// 60fps + 30s duration = 1800 frames. Matches the 30s master animation loop exactly,
-// so the recorded motion is identical to what the user sees live on screen.
+// ── MP4 EXPORT ─────────────────────────────────────────────
+// Primary path: WebCodecs VideoEncoder + Mp4Muxer. Each frame carries an explicit
+// timestamp computed from its index, so the output is ALWAYS exactly DURATION
+// seconds at FPS framerate regardless of how long rendering took. Same sigil or
+// different, same quality, same length, no choppiness from real-time capture drift.
+//
+// Fallback: MediaRecorder + canvas.captureStream. Used only when WebCodecs or the
+// mp4-muxer library is unavailable (older browsers). Under that path the video
+// duration can drift on slow devices because capture is wall-clock-bound; the
+// fallback clamps itself to 30fps/15s to keep that drift minimal.
 async function exportSigilMp4() {
   if (!sigil) return;
-  if (typeof MediaRecorder === 'undefined') {
-    alert('Video recording is not supported in this browser.');
-    return;
-  }
   closeExportBar();
   const btn = document.getElementById('exportBtn');
   if (!btn || btn.classList.contains('busy')) return;
 
-  // MIME type detection: prefer MP4, fall back to WebM
-  const candidates = [
-    { mime: 'video/mp4;codecs=avc1.42E01E',    ext: 'mp4'  },
-    { mime: 'video/mp4',                        ext: 'mp4'  },
-    { mime: 'video/webm;codecs=vp9',            ext: 'webm' },
-    { mime: 'video/webm;codecs=vp8',            ext: 'webm' },
-    { mime: 'video/webm',                       ext: 'webm' },
-  ];
-  const picked = candidates.find(c => MediaRecorder.isTypeSupported(c.mime));
-  if (!picked) {
-    alert('The browser does not support any video format.');
-    return;
+  const hasWebCodecs = (typeof VideoEncoder !== 'undefined')
+                    && (typeof VideoFrame    !== 'undefined')
+                    && (typeof window.Mp4Muxer === 'object');
+  if (hasWebCodecs) {
+    return exportSigilMp4WebCodecs(btn);
   }
+  if (typeof MediaRecorder !== 'undefined') {
+    return exportSigilMp4MediaRecorder(btn);
+  }
+  alert('Video recording is not supported in this browser.');
+}
 
+// ── WebCodecs path ────────────────────────────────────────
+// Frames are encoded with timestamps derived from their index, not wall-clock,
+// so the output is a perfect 30s/60fps clip every time regardless of render speed.
+// That means we DON'T need to force perf mode — we respect whatever mode the user
+// is in. PERF live view → PERF video. HQ live view → HQ video. Complex sigils in
+// HQ just make the user wait longer; the output file is identical in duration
+// and framerate to a simple sigil.
+async function exportSigilMp4WebCodecs(btn) {
   btn.classList.add('busy');
 
-  // Native pixel quality — c1 is DPR-scaled, take the physical min side (max 1080, no upscale)
   const dprMp4 = window._dpr || 1;
   const Wlog2  = FF.logicalW || window.innerWidth;
   const Hlog2  = FF.logicalH || window.innerHeight;
   const physMin = Math.min(Wlog2, Hlog2) * dprMp4;
-  const EXPORT_SIZE = Math.min(Math.round(physMin), 1080);
-  const FPS         = 60;                  // mirrors the live 60Hz refresh feel
-  const DURATION    = 30;                  // full master loop — live rotY cadence (not 2× faster)
+  // H.264 encoders require even dimensions.
+  const EXPORT_SIZE = Math.min(Math.round(physMin), 1080) & ~1;
+  const FPS         = 60;
+  const DURATION    = 30;
   const FRAME_COUNT = FPS * DURATION;      // 1800 frames
-
-  // For consistent smoothness across every sigil, force PERF MODE during the export.
-  // Why: MediaRecorder + canvas.captureStream sample at wall-clock 60fps. If our offscreen
-  // render can't finish a frame in ≤16ms (likely on high-tier sigils with 900+ particles),
-  // the stream duplicates the last frame — the output looks choppy even though the file
-  // claims 60fps. PERF MODE drops particle count so every sigil renders in under a frame.
-  // Rings, core, rays, rare forms (Nakamoto, FullSet, rainbow, moons, spectrum waves) all
-  // stay at full detail; only the ambient particle atmosphere thins. For a single high-
-  // detail frame, PNG export is the correct tool.
-  const savedPerfMode = perfMode;
-  if (!perfMode) {
-    perfMode = true;
-    buildVisuals();    // regenerate FF + particles at perf settings
-  }
+  const FRAME_DURATION_US = Math.round(1_000_000 / FPS);
 
   const state = beginSigilCapture();
 
@@ -2956,11 +2951,128 @@ async function exportSigilMp4() {
   const sx       = FF.cx * dprMp4 - cropSize / 2;
   const sy       = FF.cy * dprMp4 - cropSize / 2;
 
-  // Stream — captureStream(FPS), in sync with the MediaRecorder frame-rate
+  // Muxer — in-memory ArrayBuffer target, finalized into a Blob once encoding is done.
+  const { Muxer, ArrayBufferTarget } = window.Mp4Muxer;
+  const muxer = new Muxer({
+    target: new ArrayBufferTarget(),
+    video: {
+      codec:  'avc',
+      width:  EXPORT_SIZE,
+      height: EXPORT_SIZE,
+      frameRate: FPS,
+    },
+    fastStart: 'in-memory',
+  });
+
+  let encodeError = null;
+  const encoder = new VideoEncoder({
+    output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
+    error:  (err) => { encodeError = err; console.error('VideoEncoder error:', err); },
+  });
+
+  encoder.configure({
+    codec:     'avc1.42001f',       // H.264 Baseline 3.1 — maximum compatibility
+    width:     EXPORT_SIZE,
+    height:    EXPORT_SIZE,
+    bitrate:   16_000_000,           // 16 Mbps
+    framerate: FPS,
+  });
+
+  btn.textContent = '⬇ RECORDING 0%';
+
+  try {
+    for (let i = 0; i < FRAME_COUNT; i++) {
+      if (encodeError) throw encodeError;
+
+      drawSigilCaptureFrame(i / FRAME_COUNT, DURATION, state.rotY, offCtx, EXPORT_SIZE, sx, sy, cropSize);
+
+      const frame = new VideoFrame(off, {
+        timestamp: i * FRAME_DURATION_US,
+        duration:  FRAME_DURATION_US,
+      });
+      // Keyframe every 60 frames (≈1s) — keeps seek responsive, adds tiny overhead.
+      encoder.encode(frame, { keyFrame: (i % 60 === 0) });
+      frame.close();
+
+      btn.textContent = `⬇ RECORDING ${Math.round((i / FRAME_COUNT) * 100)}%`;
+
+      // Yield to the event loop so the UI + encoder queue drain.
+      if (i % 8 === 0) {
+        await new Promise(r => setTimeout(r, 0));
+      }
+      // If the encoder backs up (slow device), pause until the queue is healthy.
+      while (encoder.encodeQueueSize > 20) {
+        await new Promise(r => setTimeout(r, 15));
+        if (encodeError) throw encodeError;
+      }
+    }
+
+    await encoder.flush();
+    muxer.finalize();
+
+    const { buffer } = muxer.target;
+    const blob = new Blob([buffer], { type: 'video/mp4' });
+
+    endSigilCapture(state);
+
+    downloadSigilBlob(blob, 'mp4');
+    btn.classList.remove('busy');
+    btn.textContent = '⬇ EXPORT';
+  } catch (err) {
+    console.error('MP4 export failed:', err);
+    try { encoder.close(); } catch {}
+    endSigilCapture(state);
+    btn.classList.remove('busy');
+    btn.textContent = '⬇ EXPORT';
+  }
+}
+
+// ── MediaRecorder fallback ────────────────────────────────
+// Used only when WebCodecs is unavailable. Real-time capture, so we keep the
+// legacy 30fps / 15s / 8 Mbps budget — easier for a slow device to sustain.
+async function exportSigilMp4MediaRecorder(btn) {
+  const candidates = [
+    { mime: 'video/mp4;codecs=avc1.42E01E', ext: 'mp4'  },
+    { mime: 'video/mp4',                    ext: 'mp4'  },
+    { mime: 'video/webm;codecs=vp9',        ext: 'webm' },
+    { mime: 'video/webm;codecs=vp8',        ext: 'webm' },
+    { mime: 'video/webm',                   ext: 'webm' },
+  ];
+  const picked = candidates.find(c => MediaRecorder.isTypeSupported(c.mime));
+  if (!picked) {
+    alert('The browser does not support any video format.');
+    return;
+  }
+
+  btn.classList.add('busy');
+
+  const dprMp4 = window._dpr || 1;
+  const Wlog2  = FF.logicalW || window.innerWidth;
+  const Hlog2  = FF.logicalH || window.innerHeight;
+  const physMin = Math.min(Wlog2, Hlog2) * dprMp4;
+  const EXPORT_SIZE = Math.min(Math.round(physMin), 1080) & ~1;
+  const FPS         = 30;
+  const DURATION    = 15;
+  const FRAME_COUNT = FPS * DURATION;  // 450 frames — legacy safe budget
+
+  const savedPerfMode = perfMode;
+  if (!perfMode) { perfMode = true; buildVisuals(); }
+
+  const state = beginSigilCapture();
+
+  const off    = document.createElement('canvas');
+  off.width    = EXPORT_SIZE;
+  off.height   = EXPORT_SIZE;
+  const offCtx = off.getContext('2d');
+
+  const cropSize = physMin;
+  const sx       = FF.cx * dprMp4 - cropSize / 2;
+  const sy       = FF.cy * dprMp4 - cropSize / 2;
+
   const stream   = off.captureStream(FPS);
   const recorder = new MediaRecorder(stream, {
-    mimeType:            picked.mime,
-    videoBitsPerSecond:  16_000_000,  // 16 Mbps — twice the old rate, matches the doubled fps
+    mimeType:           picked.mime,
+    videoBitsPerSecond: 8_000_000,
   });
 
   const chunks = [];
@@ -2975,7 +3087,6 @@ async function exportSigilMp4() {
   recorder.start();
 
   try {
-    // Draw the first frame (activates the stream)
     drawSigilCaptureFrame(0, DURATION, state.rotY, offCtx, EXPORT_SIZE, sx, sy, cropSize);
 
     const frameInterval = 1000 / FPS;
