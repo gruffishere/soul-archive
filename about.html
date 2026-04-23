@@ -221,6 +221,17 @@
     font-size: clamp(0.88rem, 1.55vw, 1rem);
     margin-bottom: 0.4rem;
   }
+  /* Small cyan dot before each fact title — same family as the Behind-the-math section dot */
+  .fact-title::before {
+    content: '';
+    display: inline-block;
+    width: 0.5em;
+    height: 0.5em;
+    border-radius: 50%;
+    background: hsl(190, 85%, 72%);
+    margin-right: 0.65em;
+    vertical-align: 0.14em;
+  }
   .fact-body {
     color: rgba(255, 255, 255, 0.72);
     line-height: 1.65;
@@ -235,6 +246,17 @@
     color: rgba(255, 255, 255, 0.48);
     margin: 1.6rem 0 0.8rem;
     text-transform: uppercase;
+  }
+  /* Small lavender dot before each FAQ group label — matches the FAQ section dot */
+  .faq-group::before {
+    content: '';
+    display: inline-block;
+    width: 0.5em;
+    height: 0.5em;
+    border-radius: 50%;
+    background: hsl(268, 85%, 72%);
+    margin-right: 0.6em;
+    vertical-align: 0.14em;
   }
   .faq-group:first-of-type { margin-top: 0; }
   section.faq p {
