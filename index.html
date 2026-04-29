@@ -233,9 +233,26 @@
     letter-spacing: 0.12em;
   }
 
-  .hud-tl { position: absolute; top: clamp(16px,3vw,32px); left: clamp(16px,3vw,32px); }
-  .hud-tr { position: absolute; top: clamp(16px,3vw,32px); right: clamp(16px,3vw,32px); text-align: right; }
-  .hud-bl { position: absolute; bottom: clamp(16px,3vw,32px); left: clamp(16px,3vw,32px); }
+  /* Each top corner is capped at ~45% of the viewport so a long address on the
+     left and a long sigil name on the right never collide in the middle. Works
+     for both narrow phones AND constrained iframes (e.g. the 6529 wave preview),
+     because vw is iframe-relative. */
+  .hud-tl {
+    position: absolute;
+    top:  clamp(16px, 3vw, 32px);
+    left: clamp(16px, 3vw, 32px);
+    max-width: calc(50vw - clamp(20px, 4vw, 40px));
+    min-width: 0;
+  }
+  .hud-tr {
+    position: absolute;
+    top:   clamp(16px, 3vw, 32px);
+    right: clamp(16px, 3vw, 32px);
+    text-align: right;
+    max-width: calc(50vw - clamp(20px, 4vw, 40px));
+    min-width: 0;
+  }
+  .hud-bl { position: absolute; bottom: clamp(16px, 3vw, 32px); left: clamp(16px, 3vw, 32px); }
 
   .hud-title {
     font-family: 'Bebas Neue', sans-serif;
@@ -249,6 +266,12 @@
     color: rgba(255, 255, 255, 0.65);
     margin-top: 0.3rem;
     display: block;
+    /* Truncate gracefully if the handle / address is unusually long, instead of
+       pushing the whole HUD-TL block into the right-side TIER/NAME area. */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
   }
 
   .hud-class {
@@ -259,7 +282,9 @@
     line-height: 1;
   }
 
-  /* Sigil name — shown below the tier, a wallet's personal character */
+  /* Sigil name — shown below the tier, a wallet's personal character.
+     Allowed to wrap to multiple lines if it's long enough to exceed the
+     45vw cap on .hud-tr (rather than expanding leftward into the address). */
   .hud-sigilname {
     display: block;
     font-family: 'Bebas Neue', sans-serif;
@@ -267,7 +292,9 @@
     letter-spacing: 0.22em;
     color: rgba(255, 255, 255, 0.78);
     margin-top: 0.4rem;
-    line-height: 1;
+    line-height: 1.15;
+    overflow-wrap: break-word;
+    word-break: break-word;
   }
 
   /* Each TIER/NAME row — label + value side by side, right-aligned */
@@ -420,7 +447,8 @@
   .rainbow-btn:hover { color: #fff !important; }
   .rainbow-btn:hover::before { animation-duration: 5s; }
 
-  /* Top controls — perf + export side by side */
+  /* Top controls — perf + export side by side. Wraps to a second row in narrow
+     viewports (mobile portrait, 6529 preview iframe, etc.) so no button gets clipped. */
   #topCtrls {
     position: fixed;
     top: clamp(14px, 2.5vw, 28px);
@@ -428,6 +456,9 @@
     transform: translateX(-50%);
     display: none;
     flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: calc(100vw - 24px);
     gap: 10px;
     z-index: 300;
   }

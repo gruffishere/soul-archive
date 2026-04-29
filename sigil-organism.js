@@ -354,7 +354,12 @@ function paramDotHtml(k) {
 function buildHUD() {
   const sc       = getSigilClass(sigil.tdh);
   const sigilName = generateSigilName(sigil);
-  document.getElementById('hudAddr').textContent     = shortAddr(sigil.address);
+  // Prefer the readable 6529 handle. Fall back to a short address only when no
+  // handle exists. This keeps the HUD label short and avoids long consolidation
+  // strings like "value.longexposure.eth - minting.longexposure.eth - longexposure.eth"
+  // overflowing into the right-hand tier/name block on narrow viewports (mobile + iframe).
+  const idLabel = sigil.handle || shortAddr(sigil.address);
+  document.getElementById('hudAddr').textContent     = idLabel;
   document.getElementById('hudClass').textContent    = sc.name;
   document.getElementById('hudClass').style.color    = `hsl(${sigil.baseHue}, 82%, 74%)`;
   document.getElementById('hudSigilname').textContent = sigilName;
