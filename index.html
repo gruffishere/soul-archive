@@ -710,20 +710,20 @@
   /*  MOBILE (≤ 600px) — safe-area, large tap targets, tight layout */
   /* ═══════════════════════════════════════════════════════════ */
   @media (max-width: 600px) {
-    /* Top controls — on mobile, just below the HUD labels. Icon-only buttons
-       so all six fit on a single line; the .btn-label spans are hidden. */
+    /* Top controls — on mobile, just below the HUD labels. Labels stay
+       visible but the font/padding shrink so all six buttons fit in a
+       single centered row without touching the HUD or the sigil. */
     #topCtrls {
       top: calc(env(safe-area-inset-top, 0px) + 100px);
-      gap: 6px;
+      gap: 4px;
     }
     #perfBtn, .export-btn {
-      padding: 0.5rem 0.6rem;
-      font-size: 0.85rem;
-      letter-spacing: 0;
-      min-width: 38px;
-      min-height: 36px;
+      padding: 0.35rem 0.45rem;
+      font-size: 0.42rem;
+      letter-spacing: 0.06em;
+      min-width: 0;
+      min-height: 32px;
     }
-    .btn-label { display: none; }
 
     /* Export bar — tighter, respects the bottom safe-area */
     #exportBar {
@@ -788,11 +788,11 @@
   /* Extra compression for very narrow phones (≤ 360px) and tight 6529 iframes */
   @media (max-width: 360px) {
     #perfBtn, .export-btn {
-      padding: 0.45rem 0.5rem;
-      font-size: 0.78rem;
-      min-width: 34px;
+      padding: 0.3rem 0.35rem;
+      font-size: 0.38rem;
+      letter-spacing: 0.04em;
     }
-    #topCtrls { gap: 4px; }
+    #topCtrls { gap: 3px; }
     #exportBar.visible { bottom: calc(60px + env(safe-area-inset-bottom, 0px)); }
     .export-opt { padding: 0.45rem 0.55rem; min-width: 62px; }
     .export-opt .opt-label { font-size: 0.68rem; }
@@ -1157,6 +1157,18 @@
       right: auto;
       bottom: auto;
     }
+  }
+
+  /* Narrow desktops + medium 6529 preview iframes (601-700px). Default desktop
+     button widths overflow these; this intermediate step keeps the single-line
+     toolbar from clipping the ABOUT button on the right. */
+  @media (min-width: 601px) and (max-width: 700px) {
+    #perfBtn, .export-btn {
+      padding: 0.4rem 0.7rem;
+      font-size: 0.55rem;
+      letter-spacing: 0.14em;
+    }
+    #topCtrls { gap: 8px; }
   }
 
   /* Touch device: keep hover states clean (no hover, only tap) */
